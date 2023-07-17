@@ -2,7 +2,8 @@
 # author: manfred scheucher 2023
 
 from basics import *
-
+from pysat.formula import *
+from copy import *
 
 
 def test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars):
@@ -26,83 +27,120 @@ def test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars):
 
 
 
-def find_gadget(N,logic_str,logic_fun,logic_vars):
-	blacklist_upset = []
-	blacklist_downset = []
+
+def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
+	vpool = IDPool(start_from=1) 
+	all_variables = {}
+
+	# initialize variables
+	for a,b,c in combinations(N,3):
+		for s in ['+','-','0']:
+			all_variables[('trip',(a,b,c,s))] = vpool.id()
+
+	def var(L):	return all_variables[L]
+	def var_trip(*L): return var(('trip',L))
+
+	cnf = CNF()
+	for v in all_variables.values():
+		cnf.append([+v,-v])
+
+	if DEBUG: print("adding constraints for triple assignment")
+	for a,b,c in combinations(N,3):
+		cnf.append([+var_trip(a,b,c,s) for s in ['+','-','0']])
+		for s1,s2 in combinations(['+','-','0'],2):
+			cnf.append([-var_trip(a,b,c,s1),-var_trip(a,b,c,s2)])
+
+	if DEBUG: print("adding constraints for packets")
+	# signature functions: forbid invalid configuartions 
+	for s1,s2,s3,s4 in forbidden_patterns4:
+		for a,b,c,d in combinations(N,4):
+			cnf.append([-var_trip(a,b,c,s1),-var_trip(a,b,d,s2),-var_trip(a,c,d,s3),-var_trip(b,c,d,s4)])
+
+	# pre-set zeros
+	for v in logic_vars:
+		cnf.append([+var_trip(*v,'0')])
+
+
+
+
+	from pysat.solvers import Cadical
+	s = Cadical(bootstrap_with=cnf.clauses)
+
 
 	ct = 0
-	try:
-		while True:
-			ct += 1
-			X = next(enum_partial(N,forbidden_patterns4,pre_set={v:'0' for v in logic_vars},
-					blacklist_upset=blacklist_upset,blacklist_downset=blacklist_downset))
-		
-			if DEBUG: 
-				print("testsig",ct,X_to_str(X,N),":",len(blacklist_upset),"+",len(blacklist_downset),end="\r")
-				stdout.flush()
+	blacklist_upset = 0
+	blacklist_downset = 0
+	for m in s.enum_models():
+	#while s.solve():
+	#	m = s.get_model()
+		ct += 1
+		m = set(m) # for faster lookup
+		X = {(a,b,c):s for a,b,c in combinations(N,3) for s in ['+','-','0'] if var_trip(a,b,c,s) in m}
+		X_str = X_to_str(X,N)
+		#print("solution #",ct,":",X_str)#,X)
 
-			too_strict,too_loose = test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars)
+		if DEBUG: 
+			print("testsig",ct,X_to_str(X,N),":",blacklist_upset,"+",blacklist_downset,end="\r")
+			stdout.flush()
 
-			if not too_strict and not too_loose: 
-				# found gadget!!
-				X_str = X_to_str(X,N)
-				return (len(N),X_str,logic_vars) 
+		too_strict,too_loose = test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars)
+
+		if not too_strict and not too_loose: 
+			# found gadget!!
+			X_str = X_to_str(X,N)
+			return (len(N),X_str,logic_vars) 
+
+		# search a smallest assignment X_min (by filling up X with zeros) which is too strict
+		if too_strict:
+			X_min = copy(X)
+			while True:
+				num_zeros = list(X_min.values()).count('0')
+				assert(num_zeros <= ((n*(n-1)*(n-2))//6))
+				if num_zeros == ((n*(n-1)*(n-2))//6): break # all zero excluded => no solutions
+
+				pre_set = {I:{X_min[I],'0'} for I in X_min} # either same or '0'
+
+				found = False
+				for X1 in enum_partial(N,forbidden_patterns4,pre_set=pre_set,
+						num_zeros_min=num_zeros+1,num_zeros_max=num_zeros+1):
+					too_strict1,too_loose1 = test_gadget(X1,N,forbidden_patterns4,logic_str,logic_fun,logic_vars)
+					if too_strict1: 
+						X_min = copy(X1)
+						found = True
+						break
+				if not found: break
+				#if DEBUG: print("-> X_min =",X_to_str(X_min,N))
+
+			#if DEBUG: print("upset-blacklist X_min =",X_to_str(X_min,N))
+			blacklist_upset += 1
+			s.add_clause([-var_trip(*I,X_min[I]) for I in X_min if X_min[I]!='0'])
 
 
-			# search a smallest assignment X_min (by filling up X with zeros) which is too strict
-			if too_strict:
-				#if DEBUG: print("too_strict X =",X_to_str(X,N))
-				X_min = copy(X)
-				while True:
-					num_zeros = list(X_min.values()).count('0')
-					assert(num_zeros <= ((n*(n-1)*(n-2))//6))
-					if num_zeros == ((n*(n-1)*(n-2))//6): break # all zero excluded => no solutions
+		# search a largest assignment X_max (by filling up X with non-zeros) which is too loose
+		if too_loose:
+			X_max = copy(X)
+			while True:
+				num_zeros = list(X_max.values()).count('0')
+				assert(num_zeros >= 0)
 
-					pre_set = {I:{X_min[I],'0'} for I in X_min} # either same or '0'
+				found = False
+				pre_set = {v:'0' for v in logic_vars}|{I:X_max[I] for I in X_max if X_max[I]!='0'}
+				for X1 in enum_partial(N,forbidden_patterns4,pre_set=pre_set,
+						num_zeros_min=num_zeros-1,num_zeros_max=num_zeros-1):
+					too_strict1,too_loose1 = test_gadget(X1,N,forbidden_patterns4,logic_str,logic_fun,logic_vars)
+					if too_loose1: 
+						X_max = copy(X1)
+						found = True
+						break
+				if not found: break
+				#if DEBUG: print("-> X_max =",X_to_str(X_max,N))
 
-					found = False
-					for X1 in enum_partial(N,forbidden_patterns4,pre_set=pre_set,
-							blacklist_upset=blacklist_upset,blacklist_downset=blacklist_downset,
-							num_zeros_min=num_zeros+1,num_zeros_max=num_zeros+1):
-						too_strict1,too_loose1 = test_gadget(X1,N,forbidden_patterns4,logic_str,logic_fun,logic_vars)
-						if too_strict1: 
-							X_min = copy(X1)
-							found = True
-							break
-					if not found: break
-					#if DEBUG: print("-> X_min =",X_to_str(X_min,N))
+			#if DEBUG: print("downset-blacklist X_max =",X_to_str(X_max,N))
+			blacklist_downset += 1
+			s.add_clause(
+				 [+var_trip(*I,'+') for I in X_max if X_max[I]!='+']
+				+[+var_trip(*I,'-') for I in X_max if X_max[I]!='-'])
 
-				#if DEBUG: print("upset-blacklist X_min =",X_to_str(X_min,N))
-				blacklist_upset.append(X_min)
-
-
-			# search a largest assignment X_max (by filling up X with non-zeros) which is too loose
-			if too_loose:
-				#if DEBUG: print("too_loose X =",X_to_str(X,N))
-				X_max = copy(X)
-				while True:
-					num_zeros = list(X_max.values()).count('0')
-					assert(num_zeros >= 0)
-
-					found = False
-					pre_set = {v:'0' for v in logic_vars}|{I:X_max[I] for I in X_max if X_max[I]!='0'}
-					for X1 in enum_partial(N,forbidden_patterns4,pre_set=pre_set,
-							blacklist_upset=blacklist_upset,blacklist_downset=blacklist_downset,
-							num_zeros_min=num_zeros-1,num_zeros_max=num_zeros-1):
-						too_strict1,too_loose1 = test_gadget(X1,N,forbidden_patterns4,logic_str,logic_fun,logic_vars)
-						if too_loose1: 
-							X_max = copy(X1)
-							found = True
-							break
-					if not found: break
-					#if DEBUG: print("-> X_max =",X_to_str(X_max,N))
-
-				#if DEBUG: print("downset-blacklist X_max =",X_to_str(X_max,N))
-				blacklist_downset.append(X_max)
-
-	except StopIteration:				
-		#print ("stop. did not find gadget.")
-		return None
 
 
 
@@ -140,7 +178,7 @@ def find_propagator_gadgets(nmax):
 			print("\t\tsearch on ",n," elements")
 			for logic_vars in logic_vars_options(N,2):
 				print("\t\t\tsearch propagator gadget",logic_str,"with logic_vars",logic_vars)
-				gadget = find_gadget(N,logic_str,logic_fun,logic_vars)
+				gadget = find_gadget_incremental(N,logic_str,logic_fun,logic_vars)
 				if gadget != None: 
 					print (">>> found propagator gadget '"+logic_str+"'"" :",gadget)
 					gadgets_found[logic_str] = gadget
@@ -180,7 +218,7 @@ def find_clause_gadgets(nmax,only_search_monotone=False,just_one=False):
 			print("\t\tsearch on ",n," elements")
 			for logic_vars in logic_vars_options(N,3):
 				print("\t\t\tsearch clause gadget",logic_str,"with logic_vars",logic_vars)
-				gadget = find_gadget(N,logic_str,logic_fun,logic_vars)
+				gadget = find_gadget_incremental(N,logic_str,logic_fun,logic_vars)
 				if gadget != None: 
 					print (">>> found propagator gadget '"+logic_str+"'"" :",gadget)
 					gadgets_found[logic_str] = gadget
@@ -198,11 +236,11 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("fp",type=str,help="file with list of settings")
 parser.add_argument("n",type=int,help="number of elements")
-parser.add_argument("--certificates_path","-cp",type=str,default="certificates5/",help="path for certificates")
+parser.add_argument("--certificates_path","-cp",type=str,default="certificates/",help="path for certificates")
 parser.add_argument("--DEBUG","-D",action="store_true",help="number of elements")
 parser.add_argument("--verify","-v",action="store_false",help="verify all gadgets")
 parser.add_argument("--verifyonly","-vo",action="store_true",help="only verify gadgets from existing certificates")
-parser.add_argument("--summarize","-le",type=str,help="summarize hard settings")
+parser.add_argument("--summarize","-s",type=str,help="summarize hard settings")
 
 args = parser.parse_args()
 vargs = vars(args)
