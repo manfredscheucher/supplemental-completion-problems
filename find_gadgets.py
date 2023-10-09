@@ -2,8 +2,8 @@
 # author: manfred scheucher 2023
 
 from basics import *
-from pysat.formula import *
-from copy import *
+from pysat.formula import IDPool,CNF
+from pysat.solvers import Cadical153
 
 
 def test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars):
@@ -24,7 +24,6 @@ def test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars):
 
 		if too_strict and too_loose: break
 	return too_strict,too_loose
-
 
 
 
@@ -61,16 +60,12 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 		cnf.append([+var_trip(*v,'0')])
 
 
-
-
-	from pysat.solvers import Cadical
-	s = Cadical(bootstrap_with=cnf.clauses)
-
+	solver = Cadical153(bootstrap_with=cnf.clauses)
 
 	ct = 0
 	blacklist_upset = 0
 	blacklist_downset = 0
-	for m in s.enum_models():
+	for m in solver.enum_models():
 	#while s.solve():
 	#	m = s.get_model()
 		ct += 1
@@ -113,7 +108,7 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 
 			#if DEBUG: print("upset-blacklist X_min =",X_to_str(X_min,N))
 			blacklist_upset += 1
-			s.add_clause([-var_trip(*I,X_min[I]) for I in X_min if X_min[I]!='0'])
+			solver.add_clause([-var_trip(*I,X_min[I]) for I in X_min if X_min[I]!='0'])
 
 
 		# search a largest assignment X_max (by filling up X with non-zeros) which is too loose
@@ -137,7 +132,7 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 
 			#if DEBUG: print("downset-blacklist X_max =",X_to_str(X_max,N))
 			blacklist_downset += 1
-			s.add_clause(
+			solver.add_clause(
 				 [+var_trip(*I,'+') for I in X_max if X_max[I]!='+']
 				+[+var_trip(*I,'-') for I in X_max if X_max[I]!='-'])
 

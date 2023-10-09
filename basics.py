@@ -1,8 +1,9 @@
 from itertools import *
-from copy import *
 from ast import *
 from sys import *
-import pycosat
+from copy import *
+from pysat.formula import IDPool,CNF
+from pysat.solvers import Cadical153
 
 import os.path
 
@@ -185,7 +186,9 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 		if num_zeros_min != None: constraints.append([+var_numzeros(*prev_I,k) for k in range(num_zeros_min,maxnumzeros+1)])
 
 
-	for sol in pycosat.itersolve(constraints):
+	solver = Cadical153(bootstrap_with=constraints)
+	for sol in solver.enum_models():
+		solver.add_clause([-x for x in sol]) # exclude this solution
 		sol = set(sol)
 		X = {}
 		for a,b,c in combinations(N,3):
