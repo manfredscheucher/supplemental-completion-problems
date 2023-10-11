@@ -79,6 +79,14 @@ can be verified within a few seconds with by following command:
     python find_gadgets.py settings_hard.txt 6 --verifyonly
 ```
 
+To exclude errors from the SAT solver, one can run
+```
+    python find_gadgets.py settings_hard.txt 6 --verifyonly --verifydrat
+```
+This will checking the correctness of a model in the case a CNF is satisfiable,
+and otherwise, if the CNF is unsatisfiablitiy,
+it will use cadidal to create a DRAT certificate and 
+employing the independent proof-checking tool DRAT-trim to verify the certificate.
 
 
 ## Certificates
