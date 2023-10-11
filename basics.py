@@ -90,16 +90,17 @@ def forbidden_patterns_filter_free_closure(forbidden_patterns4):
 	return closure
 
 	
-def test_completable(X,N,forbidden_patterns4):
+def test_completable(X,N,forbidden_patterns4,verify=False):
 	X_nonzero = {I:X[I] for I in X if X[I] != '0'}
-	for sol in enum_partial(N,forbidden_patterns4,nozeros=True,pre_set=X_nonzero):
+	for sol in enum_partial(N,forbidden_patterns4,nozeros=True,pre_set=X_nonzero,verify=verify):
 		return True
 	return False
 
 
 
 def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
-		num_zeros_max=None,num_zeros_min=None,blacklist_upset=[],blacklist_downset=[]):
+		num_zeros_max=None,num_zeros_min=None,blacklist_upset=[],blacklist_downset=[],verify=False):
+
 	all_variables = [('trip',(a,b,c,s)) for a,b,c in combinations(N,3) for s in ['+','-','0']]
 
 	if num_zeros_max != None or num_zeros_min != None:
@@ -187,9 +188,16 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 
 
 	solver = Cadical153(bootstrap_with=constraints)
+	found = False
+
 	for sol in solver.enum_models():
-		solver.add_clause([-x for x in sol]) # exclude this solution
+		found = True
 		sol = set(sol)
+		if verify:
+			for c in constraints:
+				assert(set(c)&sol) # verify solution is valid
+		
+		solver.add_clause([-x for x in sol]) # exclude this solution
 		X = {}
 		for a,b,c in combinations(N,3):
 			for s in ['+','-','0']:
@@ -197,3 +205,11 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 					X[a,b,c] = s
 			assert((a,b,c) in X)
 		yield X
+
+	if not found and verify:
+		print("verify unsatisfiability using drat-trim")
+		cnf_fp = "_tmp.cnf"
+		proof_fp = "_tmp.proof"
+		CNF(from_clauses=constraints).to_file(cnf_fp)
+		os.system(f"cadical {cnf_fp} {proof_fp} -q > /dev/null")
+		assert(os.system(f"drat-trim {cnf_fp} {proof_fp} > /dev/null") == 0) # drat-trim returns 0 on success, 1 on any failure; cf. https://github.com/marijnheule/drat-trim/blob/master/drat-trim.c

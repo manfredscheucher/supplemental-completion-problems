@@ -6,7 +6,7 @@ from pysat.formula import IDPool,CNF
 from pysat.solvers import Cadical153
 
 
-def test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars):
+def test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars,verify=False):
 	too_strict = False
 	too_loose = False
 	for var_assignment in product([True,False],repeat=len(logic_vars)):
@@ -15,7 +15,7 @@ def test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars):
 			assert(X[logic_vars[i]] == '0')
 			X[logic_vars[i]] = '+' if var_assignment[i] == True else '-'
 
-		is_compl = test_completable(X,N,forbidden_patterns4)
+		is_compl = test_completable(X,N,forbidden_patterns4,verify=verify)
 		for i in range(len(logic_vars)):
 			X[logic_vars[i]] = '0'
 
@@ -233,8 +233,8 @@ parser.add_argument("fp",type=str,help="file with list of settings")
 parser.add_argument("n",type=int,help="number of elements")
 parser.add_argument("--certificates_path","-cp",type=str,default="certificates/",help="path for certificates")
 parser.add_argument("--DEBUG","-D",action="store_true",help="number of elements")
-parser.add_argument("--verify","-v",action="store_false",help="verify all gadgets")
 parser.add_argument("--verifyonly","-vo",action="store_true",help="only verify gadgets from existing certificates")
+parser.add_argument("--verifydrat","-vd",action="store_true",help="verify models and unsatisfiablity using drat")
 parser.add_argument("--summarize","-s",type=str,help="summarize hard settings")
 
 args = parser.parse_args()
@@ -324,16 +324,16 @@ for line in (open(args.fp).readlines()):
 		if not cert: 
 			create_certificate(args.certificates_path,forbidden_patterns4_orig,pg,cg)
 
-		if args.verify:
-			gadgets = pg|cg
-			for logic_str in gadgets:
-				m,X_str,logic_vars = gadgets[logic_str]
-				X = X_from_str(X_str,range(m))
-				if logic_str in pg: logic_fun = eval("lambda A,B: "+logic_str)
-				if logic_str in cg: logic_fun = eval("lambda A,B,C: "+logic_str)
-				too_strict,too_loose = test_gadget(X,range(m),forbidden_patterns4_orig,logic_str,logic_fun,logic_vars)
-				assert(too_strict == False and too_loose == False)
-			print("#all gadgets verified")
+		#verify gadgets
+		gadgets = pg|cg
+		for logic_str in gadgets:
+			m,X_str,logic_vars = gadgets[logic_str]
+			X = X_from_str(X_str,range(m))
+			if logic_str in pg: logic_fun = eval("lambda A,B: "+logic_str)
+			if logic_str in cg: logic_fun = eval("lambda A,B,C: "+logic_str)
+			too_strict,too_loose = test_gadget(X,range(m),forbidden_patterns4_orig,logic_str,logic_fun,logic_vars,verify=args.verifydrat)
+			assert(too_strict == False and too_loose == False)
+		print("#all gadgets verified")
 
 		if args.summarize:
 			#line_latex = line.replace(" ","").replace("[","\\{").replace("]","\\}").replace("'",'')

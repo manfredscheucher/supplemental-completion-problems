@@ -8,9 +8,13 @@ by Helena Bergold, Manfred Scheucher, and Felix Schröder
 
 ## Installation
 
-To install pysat see https://pysathq.github.io/installation/
+To run the framework pysat needs to be installed, see https://pysathq.github.io/installation/
 
-To install drat-trim see https://github.com/marijnheule/drat-trim
+Optional: To verify unsatisfiability,
+install cadical https://github.com/arminbiere/cadical
+and drat-trim https://github.com/marijnheule/drat-trim
+
+
 
 
 ## Enumerating the settings
