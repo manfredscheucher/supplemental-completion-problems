@@ -282,7 +282,7 @@ for line in (open(args.fp).readlines()):
 	
 	print("pg:",len(pg),pg) 
 	
-	# based on how which propagators found, search clause gadgets
+	# if all propagator gadgets are found, one clause gadget is sufficient
 	if len(pg) == 4:
 		if not args.verifyonly and not cg: 
 			cg = find_clause_gadgets(n,just_one=True)
@@ -290,6 +290,7 @@ for line in (open(args.fp).readlines()):
 			NP_hard = True
 			print("=> NP-hard because all properators + clause gadgets found")
 
+	# otherwise search specific clause gadgets
 	elif len(pg) >= 2:
 		if not args.verifyonly and not cg: 
 			cg = find_clause_gadgets(n,only_search_monotone=True) 
