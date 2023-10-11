@@ -1,6 +1,6 @@
 This repository contains supplemental material to the article 
 "Using SAT to find NP-hardness proofs for 41 completion problems"
-by Helena Bergold, and Manfred Scheucher, and Felix Schröder
+by Helena Bergold, Manfred Scheucher, and Felix Schröder
 
 
 
@@ -9,6 +9,8 @@ by Helena Bergold, and Manfred Scheucher, and Felix Schröder
 ## Installation
 
 To install pysat see https://pysathq.github.io/installation/
+
+To install drat-trim see https://github.com/marijnheule/drat-trim
 
 
 ## Enumerating the settings
