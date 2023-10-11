@@ -210,6 +210,6 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 		print("verify unsatisfiability using drat-trim")
 		cnf_fp = "_tmp.cnf"
 		proof_fp = "_tmp.proof"
-		CNF(from_clauses=constraints).to_file(cnf_fp)
-		os.system(f"cadical {cnf_fp} {proof_fp} -q > /dev/null")
-		assert(os.system(f"drat-trim {cnf_fp} {proof_fp} > /dev/null") == 0) # drat-trim returns 0 on success, 1 on any failure; cf. https://github.com/marijnheule/drat-trim/blob/master/drat-trim.c
+		CNF(from_clauses=constraints).to_file(cnf_fp) # write cnf and
+		os.system(f"cadical {cnf_fp} {proof_fp} -q > /dev/null") # use cadical to create DRAT unsatisfiability certificate
+		assert(os.system(f"drat-trim {cnf_fp} {proof_fp} > /dev/null") == 0) # drat-trim returns 0 when the certificate is valid and 1 on any failure; cf. https://github.com/marijnheule/drat-trim/blob/master/drat-trim.c
