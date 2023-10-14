@@ -2,8 +2,6 @@
 # author: manfred scheucher 2023
 
 from basics import *
-from pysat.formula import IDPool,CNF
-from pysat.solvers import Cadical153
 
 
 def test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars,verify=False):
@@ -39,28 +37,31 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 	def var(L):	return all_variables[L]
 	def var_trip(*L): return var(('trip',L))
 
-	cnf = CNF()
+	constraints = []
 	for v in all_variables.values():
-		cnf.append([+v,-v])
+		constraints.append([+v,-v])
 
 	if DEBUG: print("adding constraints for triple assignment")
 	for a,b,c in combinations(N,3):
-		cnf.append([+var_trip(a,b,c,s) for s in ['+','-','0']])
+		constraints.append([+var_trip(a,b,c,s) for s in ['+','-','0']])
 		for s1,s2 in combinations(['+','-','0'],2):
-			cnf.append([-var_trip(a,b,c,s1),-var_trip(a,b,c,s2)])
+			constraints.append([-var_trip(a,b,c,s1),-var_trip(a,b,c,s2)])
 
 	if DEBUG: print("adding constraints for packets")
 	# signature functions: forbid invalid configuartions 
 	for s1,s2,s3,s4 in forbidden_patterns4:
 		for a,b,c,d in combinations(N,4):
-			cnf.append([-var_trip(a,b,c,s1),-var_trip(a,b,d,s2),-var_trip(a,c,d,s3),-var_trip(b,c,d,s4)])
+			constraints.append([-var_trip(a,b,c,s1),-var_trip(a,b,d,s2),-var_trip(a,c,d,s3),-var_trip(b,c,d,s4)])
 
 	# pre-set zeros
 	for v in logic_vars:
-		cnf.append([+var_trip(*v,'0')])
+		constraints.append([+var_trip(*v,'0')])
 
 
-	solver = Cadical153(bootstrap_with=cnf.clauses)
+	try:
+		solver = Cadical153(bootstrap_with=constraints)
+	except ImportError:
+		solver = Cadical(bootstrap_with=constraints) # older versions
 
 	ct = 0
 	blacklist_upset = 0

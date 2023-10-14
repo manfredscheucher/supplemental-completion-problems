@@ -3,7 +3,7 @@ from ast import *
 from sys import *
 from copy import *
 from pysat.formula import IDPool,CNF
-from pysat.solvers import Cadical153
+from pysat.solvers import *
 
 import os.path
 
@@ -186,8 +186,11 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 		if num_zeros_max != None: constraints.append([+var_numzeros(*prev_I,k) for k in range(num_zeros_max+1)])
 		if num_zeros_min != None: constraints.append([+var_numzeros(*prev_I,k) for k in range(num_zeros_min,maxnumzeros+1)])
 
+	try:
+		solver = Cadical153(bootstrap_with=constraints)
+	except ImportError:
+		solver = Cadical(bootstrap_with=constraints) # older versions
 
-	solver = Cadical153(bootstrap_with=constraints)
 	found = False
 
 	for sol in solver.enum_models():
