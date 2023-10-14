@@ -295,7 +295,7 @@ for line in (open(args.fp).readlines()):
 	print("pg:",len(pg),pg) 
 	
 	# if all propagator gadgets are found, one clause gadget is sufficient
-	if len(pg) == 4:
+	if len(pg) == 4 or ((gadget2_A_or_B in pg) and (gadget2_notA_or_notB in pg)):
 		if not args.verifyonly and not cg: 
 			cg = find_clause_gadgets(n,just_one=True)
 		if cg:
