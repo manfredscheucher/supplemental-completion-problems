@@ -153,14 +153,18 @@ def logic_vars_options(N,num_vars):
 			yield V
 
 
+gadget2_A_or_B       = 'A or B'
+gadget2_A_or_notB    = 'A or not B'
+gadget2_notA_or_B    = 'not A or B'
+gadget2_notA_or_notB = 'not A or not B'
 
 def find_propagator_gadgets(nmax):
 
 	gadgets_to_find = [
-		'A or B',
-		'A or not B',
-		'not A or B',
-		'not A or not B'
+		gadget2_A_or_B,
+		gadget2_A_or_notB,
+		gadget2_notA_or_B,
+		gadget2_notA_or_notB,
 	]
 
 	gadgets_found = {}
@@ -184,23 +188,31 @@ def find_propagator_gadgets(nmax):
 
 
 
+gadget3_A_or_B_or_C          = 'A or B or C'
+gadget3_A_or_B_or_notC       = 'A or B or not C'
+gadget3_A_or_notB_or_C       = 'A or not B or C'
+gadget3_A_or_notB_or_notC    = 'A or not B or not C'
+gadget3_notA_or_B_or_C       = 'not A or B or C'
+gadget3_notA_or_B_or_notC    = 'not A or B or not C'
+gadget3_notA_or_notB_or_C    = 'not A or not B or C'
+gadget3_notA_or_notB_or_notC = 'not A or not B or not C'
 
 def find_clause_gadgets(nmax,only_search_monotone=False,just_one=False):
 	if only_search_monotone:
 		gadgets_to_find = [
-			'A or B or C'            ,
-			'not A or not B or not C',
+			gadget3_A_or_B_or_C,
+			gadget3_notA_or_notB_or_notC,
 		]
 	else:
 		gadgets_to_find = [
-			'A or B or C'            ,
-			'A or B or not C'        ,
-			'A or not B or C'        ,
-			'A or not B or not C'    ,
-			'not A or B or C'        ,
-			'not A or B or not C'    ,
-			'not A or not B or C'    ,
-			'not A or not B or not C',
+			gadget3_A_or_B_or_C,
+			gadget3_A_or_B_or_notC,
+			gadget3_A_or_notB_or_C,
+			gadget3_A_or_notB_or_notC,
+			gadget3_notA_or_B_or_C,
+			gadget3_notA_or_B_or_notC,
+			gadget3_notA_or_notB_or_C,
+			gadget3_notA_or_notB_or_notC,
 		]
 
 	gadgets_found = {}
@@ -294,27 +306,31 @@ for line in (open(args.fp).readlines()):
 	elif len(pg) >= 2:
 		if not args.verifyonly and not cg: 
 			cg = find_clause_gadgets(n,only_search_monotone=True) 
-			# only search "A or B or C" and "not A or not B or not C" gadget
+			# only search gadget3_A_or_B_or_C and gadget3_notA_or_notB_or_notC gadget
 		
-		if ("A or B or C" in cg) and ("not A or B" in pg) and ("not A or not B" in pg):
+		print("gadget3_A_or_B_or_C",gadget3_A_or_B_or_C in cg)
+		print("gadget3_notA_or_notB_or_notC",gadget3_notA_or_notB_or_notC in cg)
+		print("gadget2_notA_or_B",gadget2_notA_or_B in pg,gadget2_notA_or_B,"!!!!")
+		print("gadget2_notA_or_notB",gadget2_notA_or_notB in pg)
+
+		if (gadget3_A_or_B_or_C in cg) and (gadget2_notA_or_B in pg) and (gadget2_notA_or_notB in pg):
 			NP_hard = True
 			print("=> NP-hard because positive monotone clause + right propagations")
 
-		elif ("A or B or C" in cg) and ("A or not B" in pg) and ("not A or not B" in pg):
+		elif (gadget3_A_or_B_or_C in cg) and (gadget2_A_or_notB in pg) and (gadget2_notA_or_notB in pg):
 			NP_hard = True
 			print("=> NP-hard because positive monotone clause + left propagations")
 
-		elif ("not A or not B or not C" in cg) and ("A or B" in pg) and ("A or not B" in pg):
+		elif (gadget3_notA_or_notB_or_notC in cg) and (gadget2_A_or_B in pg) and (gadget2_A_or_notB in pg):
 			NP_hard = True
 			print("=> NP-hard because negative monotone clause + right propagations")
 
-		elif ("not A or not B or not C" in cg) and ("A or B" in pg) and ("not A or B" in pg):
+		elif (gadget3_notA_or_notB_or_notC in cg) and (gadget2_A_or_B in pg) and (gadget2_notA_or_B in pg):
 			NP_hard = True
 			print("=> NP-hard because negative monotone clause + left propagations")
 
 	print("cg:",len(cg),cg) 
 
-	
 	if cert: assert(NP_hard)
 
 
