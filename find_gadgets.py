@@ -292,7 +292,7 @@ for line in (open(args.fp).readlines()):
 	if not args.verifyonly and not pg: 
 		pg = find_propagator_gadgets(n)
 	
-	print("pg:",len(pg),pg) 
+	print("propagator gadgets:",len(pg),pg) 
 	
 	# if all propagator gadgets are found, one clause gadget is sufficient
 	if len(pg) == 4 or ((gadget2_A_or_B in pg) and (gadget2_notA_or_notB in pg)):
@@ -308,11 +308,6 @@ for line in (open(args.fp).readlines()):
 			cg = find_clause_gadgets(n,only_search_monotone=True) 
 			# only search gadget3_A_or_B_or_C and gadget3_notA_or_notB_or_notC gadget
 		
-		print("gadget3_A_or_B_or_C",gadget3_A_or_B_or_C in cg)
-		print("gadget3_notA_or_notB_or_notC",gadget3_notA_or_notB_or_notC in cg)
-		print("gadget2_notA_or_B",gadget2_notA_or_B in pg,gadget2_notA_or_B,"!!!!")
-		print("gadget2_notA_or_notB",gadget2_notA_or_notB in pg)
-
 		if (gadget3_A_or_B_or_C in cg) and (gadget2_notA_or_B in pg) and (gadget2_notA_or_notB in pg):
 			NP_hard = True
 			print("=> NP-hard because positive monotone clause + right propagations")
@@ -329,9 +324,9 @@ for line in (open(args.fp).readlines()):
 			NP_hard = True
 			print("=> NP-hard because negative monotone clause + left propagations")
 
-	print("cg:",len(cg),cg) 
+	print("clause gadgets:",len(cg),cg) 
 
-	if cert: assert(NP_hard)
+	if cert: assert(NP_hard) 
 
 
 	if NP_hard:
