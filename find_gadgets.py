@@ -60,7 +60,7 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 
 	try:
 		solver = Cadical153(bootstrap_with=constraints)
-	except ImportError:
+	except NameError:
 		solver = Cadical(bootstrap_with=constraints) # older versions
 
 	ct = 0

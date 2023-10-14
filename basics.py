@@ -188,7 +188,7 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 
 	try:
 		solver = Cadical153(bootstrap_with=constraints)
-	except ImportError:
+	except NameError:
 		solver = Cadical(bootstrap_with=constraints) # older versions
 
 	found = False
