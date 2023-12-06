@@ -4,6 +4,7 @@ from sys import *
 from copy import *
 from pysat.formula import IDPool,CNF
 from pysat.solvers import *
+import time
 
 import os.path
 
@@ -27,18 +28,18 @@ def load_certificate(certificates_path,forbidden_patterns4):
 	if not os.path.exists(fp):
 		return None
 	print("## load certificate from "+fp)
-	s,pg,cg = literal_eval(open(fp).readline())
-	assert(s == forbidden_patterns4)
-	return pg,cg
+	cert = literal_eval(open(fp).readline())
+	assert(cert['fpatterns'] == forbidden_patterns4)
+	return cert
 
 
-def create_certificate(certificates_path,forbidden_patterns4,pg,cg):
+def create_certificate(certificates_path,cert):
 	if not os.path.exists(certificates_path): os.makedirs(certificates_path)
-	forbidden_patterns4str = ','.join(sorted(forbidden_patterns4))
+	forbidden_patterns4str = ','.join(sorted(cert['fpatterns']))
 	fp = certificates_path+forbidden_patterns4str+".txt"
 	assert(not os.path.exists(fp)) # do not overwrite existing certificates
 	with open(fp,"w") as f:
-		f.write(str(tuple([forbidden_patterns4,pg,cg]))+"\n")
+		f.write(str(cert)+"\n")
 	print("## wrote certificate to "+fp)
 
 

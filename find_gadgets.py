@@ -1,6 +1,7 @@
 # description: two-layer sat program to find gadgets on 2 variables
 # author: manfred scheucher 2023
 
+
 from basics import *
 
 
@@ -246,6 +247,7 @@ parser.add_argument("fp",type=str,help="file with list of settings")
 parser.add_argument("n",type=int,help="number of elements")
 parser.add_argument("--certificates_path","-cp",type=str,default="certificates/",help="path for certificates")
 parser.add_argument("--DEBUG","-D",action="store_true",help="number of elements")
+parser.add_argument("--preliminaryversion","-pv",action="store_true",help="use preliminary version of algorithm")
 parser.add_argument("--verifyonly","-vo",action="store_true",help="only verify gadgets from existing certificates")
 parser.add_argument("--verifydrat","-vd",action="store_true",help="verify models and unsatisfiablity using drat")
 parser.add_argument("--summarize","-s",type=str,help="summarize hard settings")
@@ -254,6 +256,10 @@ args = parser.parse_args()
 vargs = vars(args)
 print("c\tactive args:",{x:vargs[x] for x in vargs if vargs[x] != None and vargs[x] != False})
 
+
+if args.preliminaryalgorithm:
+	args.certificates_path = "certificates_pv/"
+	
 
 n = args.n
 #N = range(n)
@@ -265,6 +271,8 @@ ct0_hard = 0
 #hard_file = open(args.fp+".2hard"+str(n)+".txt","w")
 #unknown_file = open(args.fp+".2unknown"+str(n)+".txt","w")
 #cg_file = open(args.fp+".cg"+str(n)+"_"+str(args.zmin)+".txt","w")
+
+time_stat = []
 
 if args.summarize:
 	sumfile = open(args.summarize,"w")
@@ -283,11 +291,15 @@ for line in (open(args.fp).readlines()):
 	NP_hard = False
 
 	cert = load_certificate(args.certificates_path,forbidden_patterns4_orig)
+	print("cert",cert)
 	if cert:
-		pg,cg = cert
+		pg = cert['pgadgets']
+		cg = cert['cgadgets']
 	else:
 		pg,cg = [],[]
 
+
+	start_time = time.perf_counter()
 
 	# first search all propagator gadgets
 	if not args.verifyonly and not pg: 
@@ -327,6 +339,10 @@ for line in (open(args.fp).readlines()):
 
 	print("clause gadgets:",len(cg),cg) 
 
+	end_time = time.perf_counter()
+	time_diff = end_time-start_time
+
+
 	if cert: assert(NP_hard) 
 
 
@@ -334,7 +350,11 @@ for line in (open(args.fp).readlines()):
 		ct0_hard += 1
 
 		if not cert: 
-			create_certificate(args.certificates_path,forbidden_patterns4_orig,pg,cg)
+			cert = {'fpatterns':forbidden_patterns4_orig,'pgadgets':pg,'cgadgets':cg,'n':n,'time':time_diff}
+			create_certificate(args.certificates_path,cert)
+
+
+		time_stat.append(cert['time'])
 
 		#verify gadgets
 		gadgets = pg|cg
@@ -359,3 +379,21 @@ for line in (open(args.fp).readlines()):
 	print()
 
 print("hard:",ct0_hard,"/",ct0)
+
+
+
+time_stat.sort()
+print("time-statistic:",time_stat)
+
+import matplotlib.pyplot as plt
+import numpy as np
+#plt.hist(time_stat)
+
+plt.plot(time_stat, marker = 'o')
+
+#plt.title(f"computing time for certificates with n={n}")
+plt.xlabel(f"gadget (1..{len(time_stat)})")
+plt.ylabel("computing time (sec)")
+
+plt.savefig('plot.pdf')
+plt.show()
