@@ -26,6 +26,8 @@ def test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars,verify=Fa
 
 
 
+blacklist_stat = [] 
+
 def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 	vpool = IDPool(start_from=1) 
 	all_variables = {}
@@ -67,6 +69,7 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 	ct = 0
 	blacklist_upset = 0
 	blacklist_downset = 0
+	result = None
 	for m in solver.enum_models():
 	#while s.solve():
 	#	m = s.get_model()
@@ -77,7 +80,7 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 		#print("solution #",ct,":",X_str)#,X)
 
 		if DEBUG: 
-			print("testsig",ct,X_to_str(X,N),":",blacklist_upset,"+",blacklist_downset,end="\r")
+			print("blacklisted: up =",blacklist_upset,", down =",blacklist_downset,end="\r")
 			stdout.flush()
 
 		too_strict,too_loose = test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars)
@@ -85,12 +88,14 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 		if not too_strict and not too_loose: 
 			# found gadget!!
 			X_str = X_to_str(X,N)
-			return (len(N),X_str,logic_vars) 
+			result = (len(N),X_str,logic_vars) 
+			break
 
 		# search a smallest assignment X_min (by filling up X with zeros) which is too strict
 		if too_strict:
 			X_min = copy(X)
 			while True:
+				if args.preliminaryversion: break
 				num_zeros = list(X_min.values()).count('0')
 				assert(num_zeros <= ((n*(n-1)*(n-2))//6))
 				if num_zeros == ((n*(n-1)*(n-2))//6): break # all zero excluded => no solutions
@@ -117,6 +122,7 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 		if too_loose:
 			X_max = copy(X)
 			while True:
+				if args.preliminaryversion: break
 				num_zeros = list(X_max.values()).count('0')
 				assert(num_zeros >= 0)
 
@@ -139,6 +145,10 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 				+[+var_trip(*I,'-') for I in X_max if X_max[I]!='-'])
 
 
+	if DEBUG: print() # print final statistic before leaving procedure
+	global blacklist_stat 	
+	blacklist_stat.append((blacklist_upset,blacklist_downset)) 	
+	return result
 
 
 def logic_vars_options(N,num_vars):
@@ -248,8 +258,10 @@ parser.add_argument("n",type=int,help="number of elements")
 parser.add_argument("--certificates_path","-cp",type=str,default="certificates/",help="path for certificates")
 parser.add_argument("--DEBUG","-D",action="store_true",help="number of elements")
 parser.add_argument("--preliminaryversion","-pv",action="store_true",help="use preliminary version of algorithm")
+parser.add_argument("--recompute","-R",action="store_true",help="do not load certificates")
 parser.add_argument("--verifyonly","-vo",action="store_true",help="only verify gadgets from existing certificates")
 parser.add_argument("--verifydrat","-vd",action="store_true",help="verify models and unsatisfiablity using drat")
+parser.add_argument("--plotstatistics","-ps",action="store_true",help="create plots")
 parser.add_argument("--summarize","-s",type=str,help="summarize hard settings")
 
 args = parser.parse_args()
@@ -257,9 +269,9 @@ vargs = vars(args)
 print("c\tactive args:",{x:vargs[x] for x in vargs if vargs[x] != None and vargs[x] != False})
 
 
-if args.preliminaryalgorithm:
+if args.preliminaryversion:
 	args.certificates_path = "certificates_pv/"
-	
+
 
 n = args.n
 #N = range(n)
@@ -290,7 +302,11 @@ for line in (open(args.fp).readlines()):
 
 	NP_hard = False
 
-	cert = load_certificate(args.certificates_path,forbidden_patterns4_orig)
+	if not args.recompute:
+		cert = load_certificate(args.certificates_path,forbidden_patterns4_orig)
+	else:
+		cert = None
+
 	print("cert",cert)
 	if cert:
 		pg = cert['pgadgets']
@@ -341,6 +357,8 @@ for line in (open(args.fp).readlines()):
 
 	end_time = time.perf_counter()
 	time_diff = end_time-start_time
+	if DEBUG:
+		print(f"computing time: {time_diff} seconds")
 
 
 	if cert: assert(NP_hard) 
@@ -352,7 +370,6 @@ for line in (open(args.fp).readlines()):
 		if not cert: 
 			cert = {'fpatterns':forbidden_patterns4_orig,'pgadgets':pg,'cgadgets':cg,'n':n,'time':time_diff}
 			create_certificate(args.certificates_path,cert)
-
 
 		time_stat.append(cert['time'])
 
@@ -372,28 +389,63 @@ for line in (open(args.fp).readlines()):
 			#line_latex = line_latex.replace("\n",",\n")
 			#sumfile.write(line_latex)
 			sumfile.write(line)
-
 	else:
 		print("=> unknown")
+		if not args.verifyonly:
+			time_stat.append(time_diff) # also include failures in statistic
+
 
 	print()
 
 print("hard:",ct0_hard,"/",ct0)
 
 
+if 1:
+	fp = args.fp+f".n{n}_stat"+('_prelim' if args.preliminaryversion else "")+".txt"
+	print("write stats to",fp)
+	with open(fp,"w") as f:
+		f.write(str({'time_stat':time_stat,'blacklist_stat':blacklist_stat})+"\n")
 
-time_stat.sort()
-print("time-statistic:",time_stat)
+# create plots
+if args.plotstatistics:
+	import matplotlib.pyplot as plt
+	import numpy as np
+	#plt.hist(time_stat)
 
-import matplotlib.pyplot as plt
-import numpy as np
-#plt.hist(time_stat)
+	if time_stat:
+		time_stat.sort()
+		#print("time-statistic:",time_stat)
 
-plt.plot(time_stat, marker = 'o')
+		plt.plot(time_stat, marker = 'o')
 
-#plt.title(f"computing time for certificates with n={n}")
-plt.xlabel(f"gadget (1..{len(time_stat)})")
-plt.ylabel("computing time (sec)")
+		#plt.title(f"search gadget of size n={n}")
+		plt.xlabel(f"setting x")
+		plt.ylabel("computing time (sec)")
 
-plt.savefig('plot.pdf')
-plt.show()
+		plt_file = args.fp+f".n{n}_stat_time"+('_prelim' if args.preliminaryversion else "")+".pdf"
+		plt.savefig(plt_file)
+		print("plotted time statistic to file:",plt_file)
+		#plt.show()
+
+
+	plt.clf() # clear figure
+	blacklist_stat.sort(key=lambda v:sum(v))
+	blacklist_total_stat = [u+d for (u,d) in blacklist_stat]
+	blacklist_upset_stat = [u for (u,d) in blacklist_stat]
+	blacklist_downset_stat = [d for (u,d) in blacklist_stat]
+	#blacklist_upset_stat.sort()
+	#blacklist_downset_stat.sort()
+	#print("blacklist_upset_stat",blacklist_upset_stat)
+	#print("blacklist_downset_stat",blacklist_downset_stat)
+	marker = 'o' if len(blacklist_stat)< 10 else None
+	plt.plot(blacklist_total_stat, marker=marker, color='black',label='label0')
+	plt.plot(blacklist_upset_stat, marker=marker, color='blue',label='label1')
+	plt.plot(blacklist_downset_stat, marker=marker, color='red',label='label2')
+	plt.xlabel(f"execution x of our algorithm")
+	plt.ylabel("blacklisted upsets (blue) and downsets (red); total is black")
+
+	plt_file = args.fp+f".n{n}_stat_blacklist"+('_prelim' if args.preliminaryversion else "")+".pdf"
+	plt.savefig(plt_file)
+	print("plotted blacklist statistic to file:",plt_file)
+	#plt.show()
+

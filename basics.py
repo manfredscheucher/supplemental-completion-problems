@@ -37,7 +37,7 @@ def create_certificate(certificates_path,cert):
 	if not os.path.exists(certificates_path): os.makedirs(certificates_path)
 	forbidden_patterns4str = ','.join(sorted(cert['fpatterns']))
 	fp = certificates_path+forbidden_patterns4str+".txt"
-	assert(not os.path.exists(fp)) # do not overwrite existing certificates
+	#assert(not os.path.exists(fp)) # do not overwrite existing certificates
 	with open(fp,"w") as f:
 		f.write(str(cert)+"\n")
 	print("## wrote certificate to "+fp)
