@@ -289,8 +289,11 @@ args = parser.parse_args()
 vargs = vars(args)
 print("c\tactive args:",{x:vargs[x] for x in vargs if vargs[x] != None and vargs[x] != False})
 
+if args.verifyonly:
+	args.load_certificates = True
+	args.summarize = False
+	
 args.certificates_path = f"certificates_{args.algorithm}/"
-
 
 n = args.n
 DEBUG = args.DEBUG
