@@ -278,7 +278,7 @@ parser.add_argument("n",type=int,help="number of elements")
 parser.add_argument("--algorithm",choices=['advanced','basic'],default='advanced',help="choose basic or advanced algorithm")
 parser.add_argument("--certificates_path","-cp",type=str,default="certificates/",help="path for certificates")
 parser.add_argument("--DEBUG","-D",action="store_true",help="number of elements")
-parser.add_argument("--recompute","-R",action="store_true",help="do not load certificates")
+parser.add_argument("--load-certificates","-L",action="store_true",help="load precomputed certificates")
 parser.add_argument("--verifyonly","-vo",action="store_true",help="only verify gadgets from existing certificates")
 parser.add_argument("--verifydrat","-vd",action="store_true",help="verify models and unsatisfiablity using drat")
 #parser.add_argument("--plotstatistics","-ps",action="store_true",help="create plots")
@@ -301,7 +301,7 @@ ct0_hard = 0
 time_stat = []
 
 if args.summarize:
-	sumfp = f"{args.fp}.summary_n{n}_{args.algorithm}"
+	sumfp = f"{args.fp}.summary_n{n}_{args.algorithm}_{SOLVER}"
 	sumfile = open(sumfp,"w")
 
 for line in (open(args.fp).readlines()):
@@ -317,12 +317,11 @@ for line in (open(args.fp).readlines()):
 
 	NP_hard = False
 
-	if not args.recompute:
+	if args.load_certificates:
 		cert = load_certificate(args.certificates_path,forbidden_patterns4_orig)
 	else:
 		cert = None
 
-	cert = None
 
 	print("cert",cert)
 	if cert:

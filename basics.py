@@ -10,8 +10,10 @@ USE_CADICAL = 0 # current version of pysat/cadical interface has memory leak
 
 if USE_CADICAL:
 	from pysat.solvers import *
+	SOLVER = "cadical"
 else:
 	import pycosat
+	SOLVER = "pycosat"
 
 
 def X_to_str(X,N):
@@ -192,8 +194,6 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 		if num_zeros_min != None: constraints.append([+var_numzeros(*prev_I,k) for k in range(num_zeros_min,maxnumzeros+1)])
 
 	if USE_CADICAL: # cadical
-		print("using cadical!")
-		exit()
 		try:
 			solver = Cadical153(bootstrap_with=constraints)
 		except NameError:
