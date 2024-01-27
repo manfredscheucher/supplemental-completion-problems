@@ -290,7 +290,7 @@ ct0_hard = 0
 time_stat = []
 
 if args.summarize:
-	sumfp = f"{args.fp}.summary_{args.algorithm}"
+	sumfp = f"{args.fp}.summary_n{n}_{args.algorithm}"
 	sumfile = open(sumfp,"w")
 
 for line in (open(args.fp).readlines()):
