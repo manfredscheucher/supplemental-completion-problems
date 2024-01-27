@@ -16,4 +16,5 @@ with open(params_+".job","w") as f:
     #f.write("#SBATCH --cpus-per-task=32\n")
     f.write("#SBATCH --mail-user=scheucher@math.tu-berlin.de\n")
     f.write("#SBATCH --mail-type=BEGIN,END\n")
-    f.write("time python3 find_gadgets_new.py "+params+"\n")
+    f.write("time python3 find_gadgets_new.py "+params+" --algorithm advanced\n")
+    f.write("time python3 find_gadgets_new.py "+params+" --algorithm basic\n")
