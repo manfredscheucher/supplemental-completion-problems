@@ -61,22 +61,29 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 	for v in logic_vars:
 		constraints.append([+var_trip(*v,'0')])
 
-
-	try:
-		solver = Cadical153(bootstrap_with=constraints)
-	except NameError:
-		solver = Cadical(bootstrap_with=constraints) # older versions
+	if USE_CADICAL:
+		try:
+			solver = Cadical153(bootstrap_with=constraints)
+		except NameError:
+			solver = Cadical(bootstrap_with=constraints) # older versions
 
 	ct = 0
 	blacklist_upset = 0
 	blacklist_downset = 0
 	result = None
-	for m in solver.enum_models():
-	#while s.solve():
-	#	m = s.get_model()
+
+	#for sol in solver.enum_models():
+	while True:
+		if USE_CADICAL:
+			if not solver.solve(): break
+			sol = solver.get_model()
+		else:
+			sol = pycosat.solve(constraints)
+			if sol == "UNSAT": break
+
 		ct += 1
-		m = set(m) # for faster lookup
-		X = {(a,b,c):s for a,b,c in combinations(N,3) for s in ['+','-','0'] if var_trip(a,b,c,s) in m}
+		sol = set(sol) # for faster lookup
+		X = {(a,b,c):s for a,b,c in combinations(N,3) for s in ['+','-','0'] if var_trip(a,b,c,s) in sol}
 		X_str = X_to_str(X,N)
 		#print("solution #",ct,":",X_str)#,X)
 
@@ -116,7 +123,10 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 
 			#if DEBUG: print("upset-blacklist X_min =",X_to_str(X_min,N))
 			blacklist_upset += 1
-			solver.add_clause([-var_trip(*I,X_min[I]) for I in X_min if X_min[I]!='0'])
+			if USE_CADICAL:
+				solver.add_clause([-var_trip(*I,X_min[I]) for I in X_min if X_min[I]!='0'])
+			else:
+				constraints.append([-var_trip(*I,X_min[I]) for I in X_min if X_min[I]!='0'])
 
 
 		# search a largest assignment X_max (by filling up X with non-zeros) which is too loose
@@ -141,9 +151,14 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 
 			#if DEBUG: print("downset-blacklist X_max =",X_to_str(X_max,N))
 			blacklist_downset += 1
-			solver.add_clause(
-				 [+var_trip(*I,'+') for I in X_max if X_max[I]!='+']
-				+[+var_trip(*I,'-') for I in X_max if X_max[I]!='-'])
+			if USE_CADICAL:
+				solver.add_clause(
+					 [+var_trip(*I,'+') for I in X_max if X_max[I]!='+']
+					+[+var_trip(*I,'-') for I in X_max if X_max[I]!='-'])
+			else:
+				constraints.append(
+					 [+var_trip(*I,'+') for I in X_max if X_max[I]!='+']
+					+[+var_trip(*I,'-') for I in X_max if X_max[I]!='-'])
 
 
 	end_time0 = time.perf_counter()
@@ -274,11 +289,7 @@ args = parser.parse_args()
 vargs = vars(args)
 print("c\tactive args:",{x:vargs[x] for x in vargs if vargs[x] != None and vargs[x] != False})
 
-
-if args.algorithm == 'basic':
-	args.certificates_path = "certificates_basic/"
-if args.algorithm == 'advanced':
-	args.certificates_path = "certificates_advanced/"
+args.certificates_path = f"certificates_{args.algorithm}/"
 
 
 n = args.n

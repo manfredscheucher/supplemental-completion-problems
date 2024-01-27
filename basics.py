@@ -2,12 +2,16 @@ from itertools import *
 from ast import *
 from sys import *
 from copy import *
-from pysat.formula import IDPool,CNF
-from pysat.solvers import *
+from pysat.formula import IDPool
 import time
-
 import os.path
 
+USE_CADICAL = 0 # current version of pysat/cadical interface has memory leak
+
+if USE_CADICAL:
+	from pysat.solvers import *
+else:
+	import pycosat
 
 
 def X_to_str(X,N):
@@ -187,21 +191,23 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 		if num_zeros_max != None: constraints.append([+var_numzeros(*prev_I,k) for k in range(num_zeros_max+1)])
 		if num_zeros_min != None: constraints.append([+var_numzeros(*prev_I,k) for k in range(num_zeros_min,maxnumzeros+1)])
 
-	try:
-		solver = Cadical153(bootstrap_with=constraints)
-	except NameError:
-		solver = Cadical(bootstrap_with=constraints) # older versions
+	if USE_CADICAL: # cadical
+		print("using cadical!")
+		exit()
+		try:
+			solver = Cadical153(bootstrap_with=constraints)
+		except NameError:
+			solver = Cadical(bootstrap_with=constraints) # older versions
+		solutions_iterator = solver.enum_models()
+	else: # picosat
+		solutions_iterator = pycosat.itersolve(constraints)
 
 	found = False
 
-	for sol in solver.enum_models():
+	for sol in solutions_iterator:
 		found = True
 		sol = set(sol)
-		if verify:
-			for c in constraints:
-				assert(set(c)&sol) # verify solution is valid
 		
-		solver.add_clause([-x for x in sol]) # exclude this solution
 		X = {}
 		for a,b,c in combinations(N,3):
 			for s in ['+','-','0']:
