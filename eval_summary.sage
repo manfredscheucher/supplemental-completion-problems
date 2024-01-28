@@ -55,7 +55,6 @@ if 1:
 	stat = [(entry['total_time'],entry['status']) for entry in summary]
 	time,status = zip(*sorted(stat))
 
-	print("time",time)
 
 	plt = []
 	plt += plot_stat(time,status,'red')
