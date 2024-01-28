@@ -32,6 +32,7 @@ def load_certificate(certificates_path,forbidden_patterns4):
 	forbidden_patterns4str = ','.join(sorted(forbidden_patterns4))
 	fp = certificates_path+forbidden_patterns4str+".txt"
 	if not os.path.exists(fp):
+		print(f"fp {fp} not exists")
 		return None
 	print("## load certificate from "+fp)
 	cert = literal_eval(open(fp).readline())

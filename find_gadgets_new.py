@@ -282,7 +282,7 @@ parser.add_argument("fp",type=str,help="file with list of settings")
 parser.add_argument("n",type=int,help="number of elements")
 parser.add_argument("--timeout","-to",type=int,default=0,help="timeout")
 parser.add_argument("--algorithm",choices=['advanced','basic'],default='advanced',help="choose basic or advanced algorithm")
-parser.add_argument("--certificates_path","-cp",type=str,default="certificates/",help="path for certificates")
+parser.add_argument("--certificates_path","-cp",type=str,default=None,help="path for certificates")
 parser.add_argument("--DEBUG","-D",action="store_true",help="number of elements")
 parser.add_argument("--load-certificates","-L",action="store_true",help="load precomputed certificates")
 parser.add_argument("--verifyonly","-vo",action="store_true",help="only verify gadgets from existing certificates")
@@ -299,7 +299,8 @@ if args.verifyonly:
 	args.load_certificates = True
 	args.summarize = False
 	
-args.certificates_path = f"certificates_{args.algorithm}/"
+if args.certificates_path == None:
+	args.certificates_path = f"certificates_{args.algorithm}/"
 
 n = args.n
 DEBUG = args.DEBUG
@@ -309,7 +310,7 @@ ct0_succ = 0
 ct0_fail = 0
 ct0_to = 0
 
-time_stat = []
+
 
 if args.summarize:
 	sumfp = f"{args.fp}.summary_n{n}_{args.algorithm}_{SOLVER}"
@@ -330,6 +331,7 @@ for line in (open(args.fp).readlines()):
 
 	if args.load_certificates:
 		cert = load_certificate(args.certificates_path,forbidden_patterns4_orig)
+		if args.verifyonly: assert(cert)
 	else:
 		cert = None
 
@@ -407,11 +409,10 @@ for line in (open(args.fp).readlines()):
 		ct0_succ += 1
 
 		if not cert: 
-			cert = {'fpatterns':forbidden_patterns4_orig,'pgadgets':pg,'cgadgets':cg,'n':n,'time':time_diff}
+			cert = {'fpatterns':forbidden_patterns4_orig,'pgadgets':pg,'cgadgets':cg,'n':n}
 			create_certificate(args.certificates_path,cert)
 
-		time_stat.append(cert['time'])
-
+		
 		#verify gadgets
 		gadgets = pg|cg
 		for logic_str in gadgets:
