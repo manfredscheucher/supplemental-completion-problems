@@ -6,9 +6,9 @@ n = int(argv[2])
 params = path+" "+str(n)
 params_ = path+"_"+str(n)
 path_short = path.split("/")[-1]  if "/" in params_  else params_
-name = path_short+"_"+str(n)
 
 for algo in ['basic','advanced']:
+    name = path_short+algo[0]+str(n)
     with open(params_+".job_"+algo,"w") as f: 
         f.write("#!/bin/bash --login\n")
         f.write(f"#SBATCH --job-name={name}\n")
