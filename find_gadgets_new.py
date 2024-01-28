@@ -45,13 +45,13 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 	for v in all_variables.values():
 		constraints.append([+v,-v])
 
-	if DEBUG: print("adding constraints for triple assignment")
+	if DEBUG>=3: print("adding constraints for triple assignment")
 	for a,b,c in combinations(N,3):
 		constraints.append([+var_trip(a,b,c,s) for s in ['+','-','0']])
 		for s1,s2 in combinations(['+','-','0'],2):
 			constraints.append([-var_trip(a,b,c,s1),-var_trip(a,b,c,s2)])
 
-	if DEBUG: print("adding constraints for packets")
+	if DEBUG>=3: print("adding constraints for packets")
 	# signature functions: forbid invalid configuartions 
 	for s1,s2,s3,s4 in forbidden_patterns4:
 		for a,b,c,d in combinations(N,4):
@@ -75,9 +75,11 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 	#for sol in solver.enum_models():
 	while True:
 		cur_time = time.perf_counter()
-		time_diff = cur_time-start_time
-		timed_out = (args.timeout > 0) and (time_diff > args.timeout)
-		if timed_out: break
+		timed_out = (args.timeout > 0) and (cur_time-start_time > args.timeout)
+		timed_out |= (args.timeoutgadget > 0) and (cur_time-start_time0 > args.timeoutgadget)
+		if timed_out: 
+			if args.DEBUG >= 1: print("\t\t\t\ttimeout!")
+			break
 
 		if USE_CADICAL:
 			if not solver.solve(): break
@@ -92,7 +94,7 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 		X_str = X_to_str(X,N)
 		#print("solution #",ct,":",X_str)#,X)
 
-		if DEBUG: 
+		if DEBUG>=3: 
 			print("blacklisted: up =",blacklist_upset,", down =",blacklist_downset,end="\r")
 			stdout.flush()
 
@@ -195,8 +197,7 @@ gadget2_A_or_notB    = 'A or not B'
 gadget2_notA_or_B    = 'not A or B'
 gadget2_notA_or_notB = 'not A or not B'
 
-def find_propagator_gadgets(nmax):
-
+def find_propagator_gadgets(n,gadgets_found={}):
 	gadgets_to_find = [
 		gadget2_A_or_B,
 		gadget2_A_or_notB,
@@ -204,22 +205,19 @@ def find_propagator_gadgets(nmax):
 		gadget2_notA_or_notB,
 	]
 
-	gadgets_found = {}
-	for logic_str in list(gadgets_to_find):
-		print("\tsearch propagator gadget",logic_str)
+	for logic_str in gadgets_to_find:
+		if logic_str in gadgets_found: continue # already known
+		if args.DEBUG>=2: print("\t\tsearch propagator gadget",logic_str)
 		logic_fun = eval("lambda A,B: "+logic_str)
 
-		for n in range(4,nmax+1):
-			N = range(n)
-			print("\t\tsearch on ",n," elements")
-			for logic_vars in logic_vars_options(N,2):
-				print("\t\t\tsearch propagator gadget",logic_str,"with logic_vars",logic_vars)
-				gadget = find_gadget_incremental(N,logic_str,logic_fun,logic_vars)
-				if gadget != None: 
-					print (">>> found propagator gadget '"+logic_str+"'"" :",gadget)
-					gadgets_found[logic_str] = gadget
-					break
-			if logic_str in gadgets_found: break
+		N = range(n)
+		for logic_vars in logic_vars_options(N,2):
+			if args.DEBUG>=2: print("\t\t\tsearch propagator gadget",logic_str,"with logic_vars",logic_vars)
+			gadget = find_gadget_incremental(N,logic_str,logic_fun,logic_vars)
+			if gadget != None: 
+				if args.DEBUG>=2: print (">>> found propagator gadget '"+logic_str+"'"" :",gadget)
+				gadgets_found[logic_str] = gadget
+				break
 
 	return gadgets_found
 
@@ -234,7 +232,7 @@ gadget3_notA_or_B_or_notC    = 'not A or B or not C'
 gadget3_notA_or_notB_or_C    = 'not A or not B or C'
 gadget3_notA_or_notB_or_notC = 'not A or not B or not C'
 
-def find_clause_gadgets(nmax,only_search_monotone=False,just_one=False):
+def find_clause_gadgets(n,gadgets_found={},only_search_monotone=False,just_one=False):
 	if only_search_monotone:
 		gadgets_to_find = [
 			gadget3_A_or_B_or_C,
@@ -252,22 +250,19 @@ def find_clause_gadgets(nmax,only_search_monotone=False,just_one=False):
 			gadget3_notA_or_notB_or_notC,
 		]
 
-	gadgets_found = {}
-	for logic_str in list(gadgets_to_find):
-		print("\tsearch clause gadget",logic_str)
+	for logic_str in gadgets_to_find:
+		if logic_str in gadgets_found: continue # already known
+		if args.DEBUG>=2: print("\t\tsearch clause gadget",logic_str)
 		logic_fun = eval("lambda A,B,C: "+logic_str)
 
-		for n in range(4,nmax+1):
-			N = range(n)
-			print("\t\tsearch on ",n," elements")
-			for logic_vars in logic_vars_options(N,3):
-				print("\t\t\tsearch clause gadget",logic_str,"with logic_vars",logic_vars)
-				gadget = find_gadget_incremental(N,logic_str,logic_fun,logic_vars)
-				if gadget != None: 
-					print (">>> found propagator gadget '"+logic_str+"'"" :",gadget)
-					gadgets_found[logic_str] = gadget
-					break
-			if logic_str in gadgets_found: break
+		N = range(n)
+		for logic_vars in logic_vars_options(N,3):
+			if args.DEBUG>=2: print("\t\t\tsearch clause gadget",logic_str,"with logic_vars",logic_vars)
+			gadget = find_gadget_incremental(N,logic_str,logic_fun,logic_vars)
+			if gadget != None: 
+				if args.DEBUG>=2: print (">>> found propagator gadget '"+logic_str+"'"" :",gadget)
+				gadgets_found[logic_str] = gadget
+				break
 
 		if gadgets_found and just_one: break
 
@@ -280,10 +275,11 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("fp",type=str,help="file with list of settings")
 parser.add_argument("n",type=int,help="number of elements")
-parser.add_argument("--timeout","-to",type=int,default=0,help="timeout")
+parser.add_argument("--timeout","-to",type=int,default=0,help="glocal timeout")
+parser.add_argument("--timeoutgadget","-tog",type=int,default=0,help="timeout for gadgets")
 parser.add_argument("--algorithm",choices=['advanced','basic'],default='advanced',help="choose basic or advanced algorithm")
 parser.add_argument("--certificates_path","-cp",type=str,default=None,help="path for certificates")
-parser.add_argument("--DEBUG","-D",action="store_true",help="number of elements")
+parser.add_argument("--DEBUG","-D",type=int,default=0,help="number of elements")
 parser.add_argument("--load-certificates","-L",action="store_true",help="load precomputed certificates")
 parser.add_argument("--verifyonly","-vo",action="store_true",help="only verify gadgets from existing certificates")
 parser.add_argument("--verifydrat","-vd",action="store_true",help="verify models and unsatisfiablity using drat")
@@ -336,54 +332,65 @@ for line in (open(args.fp).readlines()):
 		cert = None
 
 
-	print("cert",cert)
+
 	if cert:
 		pg = cert['pgadgets']
 		cg = cert['cgadgets']
 	else:
-		pg,cg = [],[]
+		pg,cg = {},{}
 
 
 	start_time = time.perf_counter()
 	test_stats = [] 
 
-	# first search all propagator gadgets
-	if not args.verifyonly and not pg: 
-		pg = find_propagator_gadgets(n)
-	
-	print("propagator gadgets:",len(pg),pg) 
-	
-	# if all propagator gadgets are found, one clause gadget is sufficient
-	if len(pg) == 4 or ((gadget2_A_or_B in pg) and (gadget2_notA_or_notB in pg)):
-		if not args.verifyonly and not cg: 
-			cg = find_clause_gadgets(n,just_one=True)
-		if cg:
-			NP_hard = True
-			print("=> NP-hard because all properators + clause gadgets found")
 
-	# otherwise search specific clause gadgets
-	elif len(pg) >= 2:
-		if not args.verifyonly and not cg: 
-			cg = find_clause_gadgets(n,only_search_monotone=True) 
-			# only search gadget3_A_or_B_or_C and gadget3_notA_or_notB_or_notC gadget
+	for n0 in range(4,n+1):
+		print("**** search on ",n0," elements *****")
+
+		# first search all propagator gadgets
+		if not args.verifyonly: 
+			pg = find_propagator_gadgets(n0,gadgets_found=pg)
 		
-		if (gadget3_A_or_B_or_C in cg) and (gadget2_notA_or_B in pg) and (gadget2_notA_or_notB in pg):
-			NP_hard = True
-			print("=> NP-hard because positive monotone clause + right propagations")
+		print("\tpropagator gadgets:",len(pg),pg) 
+		
+		# if all propagator gadgets are found, one clause gadget is sufficient
+		if len(pg) == 4 or ((gadget2_A_or_B in pg) and (gadget2_notA_or_notB in pg)):
+			if not args.verifyonly and not cg: 
+				cg = find_clause_gadgets(n0,gadgets_found=cg,just_one=True)
+			if cg:
+				NP_hard = True
+				print("=> NP-hard because all properators + clause gadgets found")
 
-		elif (gadget3_A_or_B_or_C in cg) and (gadget2_A_or_notB in pg) and (gadget2_notA_or_notB in pg):
-			NP_hard = True
-			print("=> NP-hard because positive monotone clause + left propagations")
+		# otherwise search specific clause gadgets
+		elif len(pg) >= 2:
+			if not args.verifyonly and not cg: 
+				cg = find_clause_gadgets(n0,gadgets_found=cg,only_search_monotone=True) 
+				# only search gadget3_A_or_B_or_C and gadget3_notA_or_notB_or_notC gadget
+			
+			if (gadget3_A_or_B_or_C in cg) and (gadget2_notA_or_B in pg) and (gadget2_notA_or_notB in pg):
+				NP_hard = True
+				print("=> NP-hard because positive monotone clause + right propagations")
 
-		elif (gadget3_notA_or_notB_or_notC in cg) and (gadget2_A_or_B in pg) and (gadget2_A_or_notB in pg):
-			NP_hard = True
-			print("=> NP-hard because negative monotone clause + right propagations")
+			elif (gadget3_A_or_B_or_C in cg) and (gadget2_A_or_notB in pg) and (gadget2_notA_or_notB in pg):
+				NP_hard = True
+				print("=> NP-hard because positive monotone clause + left propagations")
 
-		elif (gadget3_notA_or_notB_or_notC in cg) and (gadget2_A_or_B in pg) and (gadget2_notA_or_B in pg):
-			NP_hard = True
-			print("=> NP-hard because negative monotone clause + left propagations")
+			elif (gadget3_notA_or_notB_or_notC in cg) and (gadget2_A_or_B in pg) and (gadget2_A_or_notB in pg):
+				NP_hard = True
+				print("=> NP-hard because negative monotone clause + right propagations")
 
-	print("clause gadgets:",len(cg),cg) 
+			elif (gadget3_notA_or_notB_or_notC in cg) and (gadget2_A_or_B in pg) and (gadget2_notA_or_B in pg):
+				NP_hard = True
+				print("=> NP-hard because negative monotone clause + left propagations")
+
+		print("\tclause gadgets:",len(cg),cg) 
+
+		if NP_hard: break
+
+		cur_time = time.perf_counter()
+		time_diff = cur_time-start_time
+		if (args.timeout > 0) and (time_diff > args.timeout): break
+
 
 	end_time = time.perf_counter()
 	time_diff = end_time-start_time

@@ -135,18 +135,18 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 
 		constraints0 = []
 
-		if DEBUG: print("adding constraints for triple assignment")
+		if DEBUG>=3: print("adding constraints for triple assignment")
 		for a,b,c in combinations(N,3):
 			constraints0.append([+var_trip(a,b,c,s) for s in ['+','-','0']])
 			for s1,s2 in combinations(['+','-','0'],2):
 				constraints0.append([-var_trip(a,b,c,s1),-var_trip(a,b,c,s2)])
 
 		if nozeros:
-			if DEBUG: print("adding constraints for no-zeros")
+			if DEBUG>=3: print("adding constraints for no-zeros")
 			for a,b,c in combinations(N,3):
 				constraints0.append([+var_trip(a,b,c,s) for s in ['+','-']])
 
-		if DEBUG: print("adding constraints for packets")
+		if DEBUG>=3: print("adding constraints for packets")
 		# signature functions: forbid invalid configuartions 
 		for s1,s2,s3,s4 in forbidden_patterns4:
 			for a,b,c,d in combinations(N,4):
@@ -156,16 +156,16 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 
 	constraints = copy(CNF_cached[N,forbidden_patterns4str,nozeros])
 
-	if DEBUG: print("adding constraints for pre-set triples")
+	if DEBUG>=3: print("adding constraints for pre-set triples")
 	for I in pre_set:
 		# pre_set[I] can be a character '+'/'-'/'0' list of options such as ['+','0'] or '+-' 
 		constraints.append([var_trip(*I,v) for v in pre_set[I]]) 
 
-	if DEBUG: print("adding constraints for upset-blacklisted confiugrations")
+	if DEBUG>=3: print("adding constraints for upset-blacklisted confiugrations")
 	for Xb in blacklist_upset:
 		constraints.append([-var_trip(*I,Xb[I]) for I in Xb if Xb[I]!='0'])
 
-	if DEBUG: print("adding constraints for downset-blacklisted confiugrations")
+	if DEBUG>=3: print("adding constraints for downset-blacklisted confiugrations")
 	for Xb in blacklist_downset:
 		constraints.append(
 			 [+var_trip(*I,'+') for I in Xb if Xb[I]!='+']
