@@ -14,7 +14,7 @@ for algo in ['basic','advanced']:
     with open(fp,"w") as f: 
         f.write("#!/bin/bash --login\n")
         f.write(f"#SBATCH --job-name={name}\n")
-        f.write(f"#SBATCH --output={name}.out\n")
+        f.write(f"#SBATCH --output={fp}.out\n")
         #f.write("#SBATCH --mem=30G\n")
         f.write("#SBATCH --time=12:00:00\n")
         #f.write("#SBATCH --cpus-per-task=32\n")
