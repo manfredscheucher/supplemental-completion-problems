@@ -16,6 +16,6 @@ for algo in ['basic','advanced']:
         #f.write("#SBATCH --mem=30G\n")
         f.write("#SBATCH --time=12:00:00\n")
         #f.write("#SBATCH --cpus-per-task=32\n")
-        f.write("#SBATCH --mail-user=scheucher@math.tu-berlin.de\n")
-        f.write("#SBATCH --mail-type=BEGIN,END\n")
+        #f.write("#SBATCH --mail-user=scheucher@math.tu-berlin.de\n")
+        #f.write("#SBATCH --mail-type=BEGIN,END\n")
         f.write("time python3 find_gadgets_new.py "+params+" --timeout 3600 --algorithm "+algo+"\n")
