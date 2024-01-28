@@ -6,7 +6,7 @@ n = int(argv[2])
 params = path+" "+str(n)
 params_ = path+"_"+str(n)
 path_short = path.split("/")[-1]  if "/" in params_  else params_
-name = path_short[-4:]+"_"+str(n)
+name = path_short+"_"+str(n)
 
 for algo in ['basic','advanced']:
     with open(params_+".job_"+algo,"w") as f: 
