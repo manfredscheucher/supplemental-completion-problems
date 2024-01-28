@@ -16,7 +16,7 @@ for algo in ['basic','advanced']:
         f.write(f"#SBATCH --job-name={name}\n")
         f.write(f"#SBATCH --output={fp}.out\n")
         #f.write("#SBATCH --mem=30G\n")
-        f.write("#SBATCH --time=12:00:00\n")
+        f.write("#SBATCH --time=168:00:00\n")
         #f.write("#SBATCH --cpus-per-task=32\n")
         #f.write("#SBATCH --mail-user=scheucher@math.tu-berlin.de\n")
         #f.write("#SBATCH --mail-type=BEGIN,END\n")
