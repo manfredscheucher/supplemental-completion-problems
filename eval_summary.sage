@@ -13,34 +13,52 @@ summary = []
 for line in open(args.fp):
 	entry = literal_eval(line)
 	assert(type(entry) == dict)
+	assert('total_time' in entry) 
+	assert('status' in entry) 
+	assert('tests' in entry) 
 	summary.append(entry)
 
 
 
 
-def plot_stat(stat,group,color):
+def plot_stat(prop,status,color):
 	plt = []
-	for i in range(1,len(stat)):
-		plt.append(line2d([(i,stat[i-1]),(i+1,stat[i])],color=color,zorder=-9))
+	for i in range(1,len(prop)):
+		plt.append(line2d([(i,prop[i-1]),(i+1,prop[i])],color=color,zorder=-9))
 
-	for i in range(len(stat)):
-		color1 = color if group[i] else 'white'
-		marker = ',' if group[i] else 'o'
-		markeredgecolor = None if group[i] else color
-		plt.append(point2d((i+1,stat[i]),color=color1,markeredgecolor=markeredgecolor,marker=marker,size=args.point_size))
+	for i in range(len(prop)):
+		if status[i] == 'fail':
+			color1 = color
+			marker = ','
+			markeredgecolor = None
+		elif status[i] == 'timeout':
+			color1 = color
+			marker = 'x'
+			markeredgecolor = None
+		elif status[i] == 'succ':
+			color1 = 'white'
+			marker = 'o'
+			markeredgecolor = color
+
+
+		plt.append(point2d((i+1,prop[i]),color=color1,markeredgecolor=markeredgecolor,marker=marker,size=args.point_size))
 	return plt
 
 
-hard_settings = [entry for entry in summary if entry['certified_hard']]
-print(f"certified settings: {len(hard_settings)} of {len(summary)} settings")
+print(f"certified settings: {len([e for e in summary if e['status'] == 'succ'])} of {len(summary)} settings")
+print(f"failed settings: {len([e for e in summary if e['status'] == 'fail'])} of {len(summary)} settings")
+print(f"timeout settings: {len([e for e in summary if e['status'] == 'timeout'])} of {len(summary)} settings")
+
 print(f"total computing time: {sum(entry['total_time'] for entry in summary)}")
 
 if 1:
-	stat = [(entry['total_time'],entry['certified_hard']) for entry in summary]
-	time,hard = zip(*sorted(stat))
+	stat = [(entry['total_time'],entry['status']) for entry in summary]
+	time,status = zip(*sorted(stat))
+
+	print("time",time)
 
 	plt = []
-	plt += plot_stat(time,hard,'red')
+	plt += plot_stat(time,status,'red')
 
 	plt_file = args.fp + ".time.pdf"
 	sum(plt).save(plt_file)	
@@ -51,21 +69,21 @@ if 1:
 if 1:
 	stat = []
 	for entry in summary:
-		tests = entry['test_stats']
-		hard = entry['certified_hard']
+		tests = entry['tests']
+		status = entry['status']
 		u = 0
 		d = 0
 		for test in tests:
 			u += test['blacklist_upset']
 			d += test['blacklist_downset']
-		stat.append((u+d,u,d,hard))
+		stat.append((u+d,u,d,status))
 
-	total,up,down,hard = zip(*sorted(stat))
+	total,up,down,status = zip(*sorted(stat))
 
 	plt = []
-	plt += plot_stat(total,hard,'black')
-	plt += plot_stat(up,hard,'red')
-	plt += plot_stat(down,hard,'blue')
+	plt += plot_stat(total,status,'black')
+	plt += plot_stat(up   ,status,'red'  )
+	plt += plot_stat(down ,status,'blue' )
 
 	plt_file = args.fp + ".blacklist.pdf"
 	sum(plt).save(plt_file)	

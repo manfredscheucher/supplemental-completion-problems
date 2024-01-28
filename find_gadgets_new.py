@@ -74,6 +74,11 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 
 	#for sol in solver.enum_models():
 	while True:
+		cur_time = time.perf_counter()
+		time_diff = cur_time-start_time
+		timed_out = (args.timeout > 0) and (time_diff > args.timeout)
+		if timed_out: break
+
 		if USE_CADICAL:
 			if not solver.solve(): break
 			sol = solver.get_model()
@@ -275,6 +280,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("fp",type=str,help="file with list of settings")
 parser.add_argument("n",type=int,help="number of elements")
+parser.add_argument("--timeout","-to",type=int,default=0,help="timeout")
 parser.add_argument("--algorithm",choices=['advanced','basic'],default='advanced',help="choose basic or advanced algorithm")
 parser.add_argument("--certificates_path","-cp",type=str,default="certificates/",help="path for certificates")
 parser.add_argument("--DEBUG","-D",action="store_true",help="number of elements")
@@ -299,7 +305,9 @@ n = args.n
 DEBUG = args.DEBUG
 
 ct0 = 0
-ct0_hard = 0
+ct0_succ = 0
+ct0_fail = 0
+ct0_to = 0
 
 time_stat = []
 
@@ -312,7 +320,7 @@ for line in (open(args.fp).readlines()):
 	forbidden_patterns4_orig = literal_eval(line)
 
 	print(80*"#")
-	print("#",ct0_hard,"/",ct0,":",forbidden_patterns4_orig)
+	print("#",ct0_succ,"/",ct0,":",forbidden_patterns4_orig)
 
 	forbidden_patterns4 = forbidden_patterns_filter_free_closure(forbidden_patterns4_orig)
 	#print("completed to",forbidden_patterns4)
@@ -377,15 +385,26 @@ for line in (open(args.fp).readlines()):
 
 	end_time = time.perf_counter()
 	time_diff = end_time-start_time
+	if (args.timeout > 0) and (time_diff > args.timeout):
+		timed_out = True
+		time_diff = args.timeout # to smooth plot
+	else:
+		timed_out = False
+
 	if DEBUG:
 		print(f"computing time: {time_diff} seconds")
+
 
 
 	if cert: assert(NP_hard) 
 
 
-	if NP_hard:
-		ct0_hard += 1
+	if timed_out:
+		ct0_to += 1
+		print("=> timeout")
+
+	elif NP_hard:
+		ct0_succ += 1
 
 		if not cert: 
 			cert = {'fpatterns':forbidden_patterns4_orig,'pgadgets':pg,'cgadgets':cg,'n':n,'time':time_diff}
@@ -405,22 +424,32 @@ for line in (open(args.fp).readlines()):
 		print("#all gadgets verified")
 
 	else:
+		ct0_fail += 1
 		print("=> unknown")
 
 
 	if args.summarize:
+		if NP_hard: 
+			status = 'succ'
+		elif timed_out: 
+			status = 'timeout'
+		else:
+			status = 'fail'
+
 		summary = {
-			'fpatterns':forbidden_patterns4_orig,
-			'certified_hard':NP_hard,
+			'fpatterns' :forbidden_patterns4_orig,
+			'status'    :status,
 			'total_time':time_diff,
-			'test_stats':test_stats,
+			'tests'     :test_stats,
 			}
 		sumfile.write(str(summary)+"\n")
 
 		print("total time:",time_diff,sum(s['time'] for s in test_stats))
 	print()
 
-print("hard:",ct0_hard,"/",ct0)
+print("hard   :",ct0_succ,"/",ct0)
+print("fail   :",ct0_fail,"/",ct0)
+print("timeout:",ct0_to  ,"/",ct0)
 
 if args.summarize:
 	print(f"wrote summary to {sumfp}")
