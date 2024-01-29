@@ -26,7 +26,6 @@ def test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars,verify=Fa
 
 
 
-#level1_stat = []
 def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 	start_time0 = time.perf_counter()
 
@@ -75,9 +74,12 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 	#for sol in solver.enum_models():
 	while True:
 		cur_time = time.perf_counter()
-		timed_out = (args.timeout > 0) and (cur_time-start_time > args.timeout)
-		timed_out |= (args.timeoutgadget > 0) and (cur_time-start_time0 > args.timeoutgadget)
-		if timed_out: 
+		timed_out_setting = (args.timeout_setting > 0) and (cur_time-start_time > args.timeout_setting)
+		timed_out_gadget  = (args.timeout_gadget > 0) and (cur_time-start_time0 > args.timeout_gadget)
+
+		if timed_out_setting | timed_out_gadget:
+			global find_gadget_incremental_timed_out
+			find_gadget_incremental_timed_out = True 
 			if args.DEBUG >= 1: print("\t\t\t\ttimeout!")
 			break
 
@@ -275,8 +277,8 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("fp",type=str,help="file with list of settings")
 parser.add_argument("n",type=int,help="number of elements")
-parser.add_argument("--timeout","-to",type=int,default=0,help="glocal timeout")
-parser.add_argument("--timeoutgadget","-tog",type=int,default=0,help="timeout for gadgets")
+parser.add_argument("--timeout_setting","-tos",type=int,default=0,help="set timeout for setting")
+parser.add_argument("--timeout_gadget","-tog",type=int,default=0,help="set timeout for gadgets")
 parser.add_argument("--algorithm",choices=['advanced','basic'],default='advanced',help="choose basic or advanced algorithm")
 parser.add_argument("--certificates_path","-cp",type=str,default=None,help="path for certificates")
 parser.add_argument("--DEBUG","-D",type=int,default=0,help="number of elements")
@@ -317,7 +319,7 @@ for line in (open(args.fp).readlines()):
 	forbidden_patterns4_orig = literal_eval(line)
 
 	print(80*"#")
-	print("#",ct0_succ,"/",ct0,":",forbidden_patterns4_orig)
+	print("# succ",ct0_succ,"/ to",ct0_to,"/ fail",ct0_fail,":",forbidden_patterns4_orig)
 
 	forbidden_patterns4 = forbidden_patterns_filter_free_closure(forbidden_patterns4_orig)
 	#print("completed to",forbidden_patterns4)
@@ -340,9 +342,9 @@ for line in (open(args.fp).readlines()):
 		pg,cg = {},{}
 
 
+	find_gadget_incremental_timed_out = False # global variable
 	start_time = time.perf_counter()
 	test_stats = [] 
-
 
 	for n0 in range(4,n+1):
 		print("**** search on ",n0," elements *****")
@@ -389,24 +391,20 @@ for line in (open(args.fp).readlines()):
 
 		cur_time = time.perf_counter()
 		time_diff = cur_time-start_time
-		if (args.timeout > 0) and (time_diff > args.timeout): break
+		if (args.timeout_setting > 0) and (time_diff > args.timeout_setting): break
 
 
 	end_time = time.perf_counter()
 	time_diff = end_time-start_time
-	if (args.timeout > 0) and (time_diff > args.timeout):
+	timed_out = (args.timeout_setting > 0 and time_diff > args.timeout_setting) or find_gadget_incremental_timed_out
+
+	if find_gadget_incremental_timed_out:
 		timed_out = True
-		time_diff = args.timeout # to smooth plot
-	else:
-		timed_out = False
 
 	if DEBUG:
 		print(f"computing time: {time_diff} seconds")
 
-
-
 	if cert: assert(NP_hard) 
-
 
 	if timed_out:
 		ct0_to += 1
@@ -439,7 +437,7 @@ for line in (open(args.fp).readlines()):
 	if args.summarize:
 		if NP_hard: 
 			status = 'succ'
-		elif timed_out: 
+		elif timed_out or find_gadget_incremental_timed_out: 
 			status = 'timeout'
 		else:
 			status = 'fail'
