@@ -30,4 +30,4 @@ for algo in ['basic','advanced']:
         #f.write("#SBATCH --cpus-per-task=32\n")
         #f.write("#SBATCH --mail-user=scheucher@math.tu-berlin.de\n")
         #f.write("#SBATCH --mail-type=BEGIN,END\n")
-        f.write(f"time python3 find_gadgets_new.py {path} {rank} {n} -tos {args.timeout_setting} -tog {args.timeout_gadget} --algorithm {algo}\n")
+        f.write(f"time python3 find_gadgets_new.py {path} {args.rank} {n} -tos {args.timeout_setting} -tog {args.timeout_gadget} --algorithm {algo}\n")

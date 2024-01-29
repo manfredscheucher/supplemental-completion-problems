@@ -359,7 +359,7 @@ for line in (open(args.fp).readlines()):
 		print("**** search on ",n0," elements *****")
 
 		# first search all propagator gadgets
-		if not args.verifyonly and n0 < 6: 
+		if not args.verifyonly: 
 			pg = find_propagator_gadgets(n0,gadgets_found=pg)
 		
 		print("\tpropagator gadgets:",len(pg),pg) 
