@@ -68,20 +68,20 @@ For example, the following command searches gadgets of size 5 for all settings e
 ```
     python find_gadgets.py settings.txt 5
 ```
-Even when removing existing certificates, 
-its computation time is only about 10 CPU minutes.
+When removing existing certificates, 
+the computation time take only few CPU minutes.
 To search all structures for gadgets of size 6 in the remaining settings, 
 we used the computing cluster at TU Berlin. 
 Even though finding gadgets is a non-trivial task, 
 all found gadgets for the 41 settings
 can be verified within a few seconds with by following command:
 ```
-    python find_gadgets.py settings_hard.txt 6 --verifyonly
+    python find_gadgets_new.py settings_hard.txt 6 --load -cp certificates_known/ --verifyonly
 ```
 
 To exclude errors from the SAT solver, one can run
 ```
-    python find_gadgets.py settings_hard.txt 6 --verifyonly --verifydrat
+    python find_gadgets_new.py settings_hard.txt 6 --load -cp certificates_known/ --verifyonly --verifydrat
 ```
 This will checking the correctness of a model in the case a CNF is satisfiable,
 and otherwise, if the CNF is unsatisfiablitiy,
