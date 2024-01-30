@@ -66,7 +66,7 @@ By re-running the script, an existing certificate will be reloaded and verified 
 
 For example, the following command searches gadgets of size 5 for all settings encoded in the file `settings.txt`:
 ```
-    python find_gadgets.py settings.txt 5
+    python find_gadgets_new.py settings.txt 5
 ```
 When removing existing certificates, 
 the computation time take only few CPU minutes.
