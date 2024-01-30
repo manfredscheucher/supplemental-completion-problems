@@ -9,7 +9,10 @@ args = parser.parse_args()
 
 rank = args.rank
 
-potential = [P for P in [''.join(P) for P in product('+-',repeat=rank+1)] if P.count('++') == 0]
+# all patterns with rank-1 consecutive plus symbols are required 
+forced_pattern = '++' 
+forced_pattern = (rank-1)*'+'
+potential = [P for P in [''.join(P) for P in product('+-',repeat=rank+1)] if P.count(forced_pattern) == 0]
 
 found = []
 
