@@ -109,24 +109,23 @@ def test_completable(X,N,forbidden_patterns4,verify=False):
 def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 		num_zeros_max=None,num_zeros_min=None,blacklist_upset=[],blacklist_downset=[],verify=False):
 
-	all_variables = [('trip',(a,b,c,s)) for a,b,c in combinations(N,3) for s in ['+','-','0']]
+	vpool = IDPool(start_from=1) 
+	all_variables = {}
+
+	# initialize variables
+	for I in combinations(N,3):
+		for s in ['+','-','0']:
+			all_variables[('trip',(*I,s))] = vpool.id()
 
 	if num_zeros_max != None or num_zeros_min != None:
 		maxnumzeros = len(list(combinations(N,3)))
-		all_variables += [('numzeros',(a,b,c,k)) for a,b,c in combinations(N,3) for k in range(maxnumzeros+1)]
+		for I in combinations(N,3):
+			for k in range(maxnumzeros+1):
+				all_variables[('numzeros',(*I,k))] = vpool.id()
 
-
-	all_variables_index = {}
-
-	_num_vars = 0
-	for v in all_variables:
-		all_variables_index[v] = _num_vars
-		_num_vars += 1
-
-	def var(L):	return 1+all_variables_index[L]
+	def var(L):	return all_variables[L]
 	def var_trip(*L): return var(('trip',L))
 	def var_numzeros(*L): return var(('numzeros',L))
-
 
 	global CNF_cached	
 

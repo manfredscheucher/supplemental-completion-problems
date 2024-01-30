@@ -3,6 +3,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("fp",type=str,help="file with summary")
 parser.add_argument("--point-size","-s",type=int,default=10,help="size of points")
+parser.add_argument("--logarithmic","-l",action="store_true",help="size of points")
 
 args = parser.parse_args()
 vargs = vars(args)
