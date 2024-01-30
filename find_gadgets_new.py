@@ -11,12 +11,12 @@ def test_gadget(X,N,forbidden_patterns4,logic_str,logic_fun,logic_vars,verify=Fa
 	for var_assignment in product([True,False],repeat=len(logic_vars)):
 	
 		for i in range(len(logic_vars)):
-			assert(X[logic_vars[i]] == '0')
+			assert(X[logic_vars[i]] == '?')
 			X[logic_vars[i]] = '+' if var_assignment[i] == True else '-'
 
 		is_compl = test_completable(X,N,forbidden_patterns4,verify=verify)
 		for i in range(len(logic_vars)):
-			X[logic_vars[i]] = '0'
+			X[logic_vars[i]] = '?'
 
 		if is_compl < logic_fun(*var_assignment): too_strict = True
 		if is_compl > logic_fun(*var_assignment): too_loose  = True
@@ -34,7 +34,7 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 
 	# initialize variables
 	for a,b,c in combinations(N,3):
-		for s in ['+','-','0']:
+		for s in ['+','-','?']:
 			all_variables[('trip',(a,b,c,s))] = vpool.id()
 
 	def var(L):	return all_variables[L]
@@ -46,8 +46,8 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 
 	if DEBUG>=3: print("adding constraints for triple assignment")
 	for a,b,c in combinations(N,3):
-		constraints.append([+var_trip(a,b,c,s) for s in ['+','-','0']])
-		for s1,s2 in combinations(['+','-','0'],2):
+		constraints.append([+var_trip(a,b,c,s) for s in ['+','-','?']])
+		for s1,s2 in combinations(['+','-','?'],2):
 			constraints.append([-var_trip(a,b,c,s1),-var_trip(a,b,c,s2)])
 
 	if DEBUG>=3: print("adding constraints for packets")
@@ -58,7 +58,7 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 
 	# pre-set zeros
 	for v in logic_vars:
-		constraints.append([+var_trip(*v,'0')])
+		constraints.append([+var_trip(*v,'?')])
 
 	if USE_CADICAL:
 		try:
@@ -92,7 +92,7 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 
 		ct += 1
 		sol = set(sol) # for faster lookup
-		X = {(a,b,c):s for a,b,c in combinations(N,3) for s in ['+','-','0'] if var_trip(a,b,c,s) in sol}
+		X = {(a,b,c):s for a,b,c in combinations(N,3) for s in ['+','-','?'] if var_trip(a,b,c,s) in sol}
 		X_str = X_to_str(X,N)
 		#print("solution #",ct,":",X_str)#,X)
 
@@ -113,11 +113,11 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 			X_min = copy(X)
 			while True:
 				if args.algorithm == 'basic': break
-				num_zeros = list(X_min.values()).count('0')
+				num_zeros = list(X_min.values()).count('?')
 				assert(num_zeros <= ((n*(n-1)*(n-2))//6))
 				if num_zeros == ((n*(n-1)*(n-2))//6): break # all zero excluded => no solutions
 
-				pre_set = {I:{X_min[I],'0'} for I in X_min} # either same or '0'
+				pre_set = {I:{X_min[I],'?'} for I in X_min} # either same or '?'
 
 				found = False
 				for X1 in enum_partial(N,forbidden_patterns4,pre_set=pre_set,
@@ -133,9 +133,9 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 			#if DEBUG: print("upset-blacklist X_min =",X_to_str(X_min,N))
 			blacklist_upset += 1
 			if USE_CADICAL:
-				solver.add_clause([-var_trip(*I,X_min[I]) for I in X_min if X_min[I]!='0'])
+				solver.add_clause([-var_trip(*I,X_min[I]) for I in X_min if X_min[I]!='?'])
 			else:
-				constraints.append([-var_trip(*I,X_min[I]) for I in X_min if X_min[I]!='0'])
+				constraints.append([-var_trip(*I,X_min[I]) for I in X_min if X_min[I]!='?'])
 
 
 		# search a largest assignment X_max (by filling up X with non-zeros) which is too loose
@@ -143,11 +143,11 @@ def find_gadget_incremental(N,logic_str,logic_fun,logic_vars):
 			X_max = copy(X)
 			while True:
 				if args.algorithm == 'basic': break
-				num_zeros = list(X_max.values()).count('0')
+				num_zeros = list(X_max.values()).count('?')
 				assert(num_zeros >= 0)
 
 				found = False
-				pre_set = {v:'0' for v in logic_vars}|{I:X_max[I] for I in X_max if X_max[I]!='0'}
+				pre_set = {v:'?' for v in logic_vars}|{I:X_max[I] for I in X_max if X_max[I]!='?'}
 				for X1 in enum_partial(N,forbidden_patterns4,pre_set=pre_set,
 						num_zeros_min=num_zeros-1,num_zeros_max=num_zeros-1):
 					too_strict1,too_loose1 = test_gadget(X1,N,forbidden_patterns4,logic_str,logic_fun,logic_vars)

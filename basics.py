@@ -57,11 +57,11 @@ def forbidden_patterns_closure(forbidden_patterns4):
 	solution_patterns4 = [list(pattern) for pattern in product(['+','-'],repeat=4) if ''.join(pattern) not in forbidden_patterns4]
 
 	closure = set(forbidden_patterns4)
-	for pattern in product(['+','-','0'],repeat=4):
+	for pattern in product(['+','-','?'],repeat=4):
 		pattern = ''.join(pattern)
 		completable = False
 		for sol in solution_patterns4:
-			if not [i for i in range(4) if pattern[i] != '0' and pattern[i] != sol[i]]:
+			if not [i for i in range(4) if pattern[i] != '?' and pattern[i] != sol[i]]:
 				completable = True
 		if not completable:
 			closure.add(pattern)
@@ -72,22 +72,22 @@ def forbidden_patterns_filter_free_closure(forbidden_patterns4):
 	solution_patterns4 = [list(pattern) for pattern in product(['+','-'],repeat=4) if ''.join(pattern) not in forbidden_patterns4]
 
 	closure = set(forbidden_patterns4)
-	for pattern in product(['+','-','0'],repeat=4):
+	for pattern in product(['+','-','?'],repeat=4):
 		pattern = ''.join(pattern)
 		completable = False
 		for sol in solution_patterns4:
-			if not [i for i in range(4) if pattern[i] != '0' and pattern[i] != sol[i]]:
+			if not [i for i in range(4) if pattern[i] != '?' and pattern[i] != sol[i]]:
 				completable = True
 
 		# every zero must be completable to both, plus and minus
 		all_zeros_free = True
 		for k in range(4):
-			if pattern[k] == '0':
+			if pattern[k] == '?':
 				for s in ['+','-']:
 					pattern_fill = pattern[:k]+s+pattern[k+1:]
 					completable_fill = False
 					for sol in solution_patterns4:
-						if not [i for i in range(4) if pattern_fill[i] != '0' and pattern_fill[i] != sol[i]]:
+						if not [i for i in range(4) if pattern_fill[i] != '?' and pattern_fill[i] != sol[i]]:
 							completable_fill = True
 					if not completable_fill:
 						all_zeros_free = False
@@ -99,7 +99,7 @@ def forbidden_patterns_filter_free_closure(forbidden_patterns4):
 
 	
 def test_completable(X,N,forbidden_patterns4,verify=False):
-	X_nonzero = {I:X[I] for I in X if X[I] != '0'}
+	X_nonzero = {I:X[I] for I in X if X[I] != '?'}
 	for sol in enum_partial(N,forbidden_patterns4,nozeros=True,pre_set=X_nonzero,verify=verify):
 		return True
 	return False
@@ -114,7 +114,7 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 
 	# initialize variables
 	for I in combinations(N,3):
-		for s in ['+','-','0']:
+		for s in ['+','-','?']:
 			all_variables[('trip',(*I,s))] = vpool.id()
 
 	if num_zeros_max != None or num_zeros_min != None:
@@ -136,8 +136,8 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 
 		if DEBUG>=3: print("adding constraints for triple assignment")
 		for a,b,c in combinations(N,3):
-			constraints0.append([+var_trip(a,b,c,s) for s in ['+','-','0']])
-			for s1,s2 in combinations(['+','-','0'],2):
+			constraints0.append([+var_trip(a,b,c,s) for s in ['+','-','?']])
+			for s1,s2 in combinations(['+','-','?'],2):
 				constraints0.append([-var_trip(a,b,c,s1),-var_trip(a,b,c,s2)])
 
 		if nozeros:
@@ -157,12 +157,12 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 
 	if DEBUG>=3: print("adding constraints for pre-set triples")
 	for I in pre_set:
-		# pre_set[I] can be a character '+'/'-'/'0' list of options such as ['+','0'] or '+-' 
+		# pre_set[I] can be a character '+'/'-'/'?' list of options such as ['+','?'] or '+-' 
 		constraints.append([var_trip(*I,v) for v in pre_set[I]]) 
 
 	if DEBUG>=3: print("adding constraints for upset-blacklisted confiugrations")
 	for Xb in blacklist_upset:
-		constraints.append([-var_trip(*I,Xb[I]) for I in Xb if Xb[I]!='0'])
+		constraints.append([-var_trip(*I,Xb[I]) for I in Xb if Xb[I]!='?'])
 
 	if DEBUG>=3: print("adding constraints for downset-blacklisted confiugrations")
 	for Xb in blacklist_downset:
@@ -179,15 +179,15 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 				constraints.append([-var_numzeros(*I,k1),-var_numzeros(*I,k2)])
 
 			if prev_I == None:
-				constraints.append([-var_trip(*I,'0'),+var_numzeros(*I,1)])
-				constraints.append([+var_trip(*I,'0'),+var_numzeros(*I,0)])
+				constraints.append([-var_trip(*I,'?'),+var_numzeros(*I,1)])
+				constraints.append([+var_trip(*I,'?'),+var_numzeros(*I,0)])
 			else:
 				for k in range(maxnumzeros+1):
-					constraints.append([-var_numzeros(*prev_I,k),+var_trip(*I,'0'),+var_numzeros(*I,k)])
+					constraints.append([-var_numzeros(*prev_I,k),+var_trip(*I,'?'),+var_numzeros(*I,k)])
 					if k < maxnumzeros:
-						constraints.append([-var_numzeros(*prev_I,k),-var_trip(*I,'0'),+var_numzeros(*I,k+1)])
+						constraints.append([-var_numzeros(*prev_I,k),-var_trip(*I,'?'),+var_numzeros(*I,k+1)])
 					else:
-						constraints.append([-var_numzeros(*prev_I,k),-var_trip(*I,'0')])
+						constraints.append([-var_numzeros(*prev_I,k),-var_trip(*I,'?')])
 			prev_I = I	
 
 		if num_zeros_max != None: constraints.append([+var_numzeros(*prev_I,k) for k in range(num_zeros_max+1)])
@@ -210,7 +210,7 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 		
 		X = {}
 		for a,b,c in combinations(N,3):
-			for s in ['+','-','0']:
+			for s in ['+','-','?']:
 				if var_trip(a,b,c,s) in sol: 
 					X[a,b,c] = s
 			assert((a,b,c) in X)
