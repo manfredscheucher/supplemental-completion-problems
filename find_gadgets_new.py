@@ -406,11 +406,8 @@ for line in (open(args.fp).readlines()):
 
 	if cert: assert(NP_hard) 
 
-	if timed_out:
-		ct0_to += 1
-		print("=> timeout")
 
-	elif NP_hard:
+	if NP_hard:
 		ct0_succ += 1
 
 		if not cert: 
@@ -428,6 +425,10 @@ for line in (open(args.fp).readlines()):
 			too_strict,too_loose = test_gadget(X,range(m),forbidden_patterns4_orig,logic_str,logic_fun,logic_vars,verify=args.verifydrat)
 			assert(too_strict == False and too_loose == False)
 		print("#all gadgets verified")
+
+	elif timed_out:
+		ct0_to += 1
+		print("=> timeout")
 
 	else:
 		ct0_fail += 1

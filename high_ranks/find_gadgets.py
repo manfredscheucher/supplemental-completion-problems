@@ -415,18 +415,14 @@ for line in (open(args.fp).readlines()):
 
 	if cert: assert(NP_hard) 
 
-	if timed_out:
-		ct0_to += 1
-		print("=> timeout")
 
-	elif NP_hard:
+	if NP_hard:
 		ct0_succ += 1
 
 		if not cert: 
 			cert = {'fpatterns':forbidden_patterns_orig,'pgadgets':pg,'cgadgets':cg,'n':n}
 			create_certificate(args.certificates_path,cert)
 
-		
 		#verify gadgets
 		gadgets = pg|cg
 		for logic_str in gadgets:
@@ -436,7 +432,11 @@ for line in (open(args.fp).readlines()):
 			if logic_str in cg: logic_fun = eval("lambda A,B,C: "+logic_str)
 			too_strict,too_loose = test_gadget(rank,X,range(m),forbidden_patterns_orig,logic_str,logic_fun,logic_vars,verify=args.verifydrat)
 			assert(too_strict == False and too_loose == False)
-		print("#all gadgets verified")
+		print("=> all gadgets verified")
+
+	elif timed_out:
+		ct0_to += 1
+		print("=> timeout")
 
 	else:
 		ct0_fail += 1

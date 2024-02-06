@@ -6,7 +6,7 @@ from pysat.formula import IDPool
 import time
 import os.path
 
-USE_CADICAL = 0 # current version of pysat/cadical interface has memory leak
+USE_CADICAL = 0 # Manfred: you may set to 1 but make sure that you have installed the current version of pysat (an old version had a memory leak) 
 
 if USE_CADICAL:
 	from pysat.solvers import *
