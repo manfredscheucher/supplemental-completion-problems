@@ -1,5 +1,5 @@
 This repository contains supplemental material to the article 
-"Using SAT to find NP-hardness proofs for 41 completion problems"
+"Finding hardness reductions automatically using SAT solvers"
 by Helena Bergold, Manfred Scheucher, and Felix Schröder
 
 
@@ -10,21 +10,26 @@ by Helena Bergold, Manfred Scheucher, and Felix Schröder
 
 To run the framework pysat needs to be installed, see https://pysathq.github.io/installation/
 
-Optional: To verify unsatisfiability,
+Optional: 
+To verify unsatisfiability,
 install cadical https://github.com/arminbiere/cadical
 and drat-trim https://github.com/marijnheule/drat-trim
 
+Optional: 
+To verify that settings are non-isomorphic,
+install KCBox https://github.com/meelgroup/KCBox
 
 
 
 ## Enumerating the settings
 
-The following command performs the enumeration of all families $\mathcal{F}$ of rank 3 sign patterns on $[4]$
+The following command performs the enumeration of all 
+families $\mathcal{F}$ of rank 3 sign patterns on $[4]$
 with $`\mathcal{F} \subseteq \{+-+-,+--+,+---,-+-+,-+--,--+-,---+,----\}`$
-and writes all settings to the file `settings.txt`.
+and writes all settings to the file `r3_settings.txt`.
 Each line in the file encodes a setting.
 ```
-    python enum_settings.py > settings.txt
+    python enum_settings.py 3 > r3_settings.txt
 ```
 Since among the $256 = 2^8$ subsets there are some symmetries,
 our program filters out 144 that are lexicographically minimal
@@ -35,71 +40,81 @@ with respect to
 
 Note that there might be other symmetries among the classes.
 
-
+Similarly, one can enumerate all settings for rank 4 using
+```
+    python enum_settings.py 4 > r4_settings.txt
+```
+Note that this will take several cpu days.
+The benchmark selection, however, can be enumerated almost instantly using 
+```
+    python enum_settings.py 4 --selection > r4_settings_selection.txt
+```
 
 
 ## Duplicate checking
 
-To verify that all 144 settings are non-isomorphic,
-we provide a script `enumerate.py` which enumerates all configurations up to a certain number of elements $n$ for a list of settings.
+To check whether a file only contains non-isomorphic settings,
+we provide a script `count_configurations.py`
+which uses a model counting implementation from KCBox 
+to count all configurations up to a certain number of elements $n$ for each setting.
+To verify that the 41 settings in `r3_settings_hard.txt` are non-isomorphic, 
+it is sufficient to use $n=6$ as all settings yield different numbers:
 ```
-    python enumerate.py settings.txt --countonly --nozeros 5 --fp_dup dup5.txt
-    python enumerate.py dup5.txt --countonly --nozeros 6 --fp_dup dup6.txt
-    python enumerate.py dup6.txt --countonly --table 4
+python count_configurations.py r3_settings_hard.txt 3 6
 ```
-First, the number of all configurations for up to $n=5$ is computed and settings yielding duplicate sequences are written to the file `dup5.txt`.
-For those settings, we next computed all numbers for up to $n=6$ and again output settings which yield duplicate sequences to the file `dup6.txt`.
-However, when counting all partial configurations
-and distinguishing those with distinct numbers of zeros
-(which is done by the `--table` parameter),
-all settings yield different numbers.
 
 
 ## Testing completability
 
 The script loads settings from an input file
-and for each setting it searches gadgets for the reduction. If the script terminates unsuccessfully for a setting, then there are no gadget of the specified size.
-If the script finds enough gadgets for a reduction, it creates a certificate in the `certificates/` folder
+and for each setting it searches gadgets for the reduction. 
+If the script terminates unsuccessfully for a setting, 
+then there are no gadget of the specified size.
+If the script finds enough gadgets for a reduction, 
+it creates a certificate in the `certificates_r{rank}_{algorithm}/` folder
 which verifies that the setting NP-hard.
 By re-running the script, an existing certificate will be reloaded and verified to save time.
 
 
-For example, the following command searches gadgets of size 5 for all settings encoded in the file `settings.txt`:
+For example, the following command searches gadgets of size 5 
+for all rank 3 settings encoded in the file `r3_settings_all.txt`:
 ```
-    python find_gadgets_new.py settings.txt 5
+    python find_gadgets.py r3_settings_all.txt 3 5
 ```
-When removing existing certificates, 
-the computation time take only few CPU minutes.
+As outlined in our paper, the computation only takes a few CPU minutes on a single CPU
+to classify 31 of the 144 settings as hard.
 To search all structures for gadgets of size 6 in the remaining settings, 
-we used the computing cluster at TU Berlin. 
+we used the computing cluster at TU Berlin.
 Even though finding gadgets is a non-trivial task, 
-all found gadgets for the 41 settings
-can be verified within a few seconds with by following command:
+pre-computed gadgets can be verified within a few seconds with by following command:
 ```
-    python find_gadgets_new.py settings_hard.txt 6 --load -cp certificates_known/ --verifyonly
+    python find_gadgets.py r3_settings_all.txt 3 6 --load -cp certificates_r3/ --verifyonly
 ```
+Our certificates are provided in `certificates_r3.tar.gz` and `certificates_r4.tar.gz`.
 
-To exclude errors from the SAT solver, one can run
+To exclude errors from the SAT solver, one can also run
 ```
-    python find_gadgets_new.py settings_hard.txt 6 --load -cp certificates_known/ --verifyonly --verifydrat
+    python find_gadgets.py r3_settings_all.txt 3 6 --load -cp certificates_r3/ --verifyonly --verifydrat
 ```
-This will checking the correctness of a model in the case a CNF is satisfiable,
+This will check the correctness of a model in the case a CNF is satisfiable,
 and otherwise, if the CNF is unsatisfiablitiy,
 it will use cadidal to create a DRAT certificate and 
-employing the independent proof-checking tool DRAT-trim to verify the certificate.
+employ the independent proof-checking tool DRAT-trim to verify the certificate.
 
 
 ## Certificates
 
-A certificate consists of the following triple:
+A certificate is text file which encodes a python dictionary with the following entries:
 
-- The setting is encoded by a list of forbidden patterns, e.g., `['+-+-', '-+-+']`.
+- `n` encodes the size of the gadget.
 
-- A dictionary of up to 4 propagator gadgets.
+- `fpatterns` encodes the setting as a list of forbidden patterns, e.g., `['+-+-', '-+-+']`.
+
+- `pgadgets` holds a sub-dictionary which encodes up to 4 propagator gadgets.
 The keys are strings such as `'A or not B'` and encode
 the Boolean formulas corresponding to the gadgets.
 
-- A dictionary of up to 8 clause gadgets. 
+- `cgadgets` holds a sub-dictionary which encodes up to 8 clause gadgets. 
 The keys are strings such as `'A or not B or C'` and encode
 the Boolean formulas corresponding to the gadgets.
 
@@ -121,16 +136,17 @@ For example `(0, 1, 2), (1, 2, 3)` encodes that the first variable $A$ is encode
 To give a concrete example:
 the NP-hardness certificate for the setting of generalized signotopes (i.e., $`\mathcal{F} = \{+-+-,-+-+\}`$) looks as follows:
 ```
-(
-    ['+-+-', '-+-+'], 
-    {
+{
+    'n': 5,
+    'fpatterns': ['+-+-', '-+-+'], 
+    `pgadgets`: {
         'A or B': (5, '??++-?+?+?', ((0, 1, 2), (2, 3, 4))), 
         'A or not B': (4, '?+-?', ((0, 1, 2), (1, 2, 3))), 
         'not A or B': (4, '?-+?', ((0, 1, 2), (1, 2, 3))), 
         'not A or not B': (5, '??-++?-?-?', ((0, 1, 2), (2, 3, 4)))
     }, 
-    {
+    `cgadgets`: {
         'A or not B or C': (5, '??+--???+?', ((0, 1, 2), (1, 2, 3), (2, 3, 4)))
     }
-)
+}
 ```

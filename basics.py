@@ -2,7 +2,7 @@ from itertools import *
 from ast import *
 from sys import *
 from copy import *
-from pysat.formula import IDPool
+from pysat.formula import IDPool, CNF
 import time
 import os.path
 
@@ -16,35 +16,33 @@ else:
 	SOLVER = "pycosat"
 
 
-def X_to_str(X,N):
-	return ''.join(X[a,b,c] for a,b,c in combinations(N,3))
+def X_to_str(rank,X,N):
+	return ''.join(X[I] for I in combinations(N,rank))
 
 
-def X_from_str(s,N):
-	assert(len(list(combinations(N,3))) == len(s))
-	return {(a,b,c): s[i] for i,(a,b,c) in enumerate(combinations(N,3))}
-
-
+def X_from_str(rank,s,N):
+	assert(len(list(combinations(N,rank))) == len(s))
+	return {I: s[i] for i,I in enumerate(combinations(N,rank))}
 
 
 
-def load_certificate(certificates_path,forbidden_patterns4):
-	forbidden_patterns4str = ','.join(sorted(forbidden_patterns4))
-	fp = certificates_path+forbidden_patterns4str+".txt"
+def load_certificate(certificates_path,forbidden_patterns):
+	forbidden_patternsstr = ','.join(sorted(forbidden_patterns))
+	fp = f"{certificates_path}{forbidden_patternsstr}.txt"
 	if not os.path.exists(fp):
 		print(f"fp {fp} not exists")
 		return None
 	print("## load certificate from "+fp)
 	cert = literal_eval(open(fp).readline())
-	assert(cert['fpatterns'] == forbidden_patterns4)
+	assert(cert['fpatterns'] == forbidden_patterns)
 	return cert
 
 
 def create_certificate(certificates_path,cert):
 	if not os.path.exists(certificates_path): os.makedirs(certificates_path)
-	forbidden_patterns4str = ','.join(sorted(cert['fpatterns']))
-	fp = certificates_path+forbidden_patterns4str+".txt"
-	#assert(not os.path.exists(fp)) # do not overwrite existing certificates
+	forbidden_patternsstr = ','.join(sorted(cert['fpatterns']))
+	fp = f"{certificates_path}{forbidden_patternsstr}.txt"
+	#asforbidden_patternssert(not os.path.exists(fp)) # do not overwrite existing certificates
 	with open(fp,"w") as f:
 		f.write(str(cert)+"\n")
 	print("## wrote certificate to "+fp)
@@ -53,41 +51,41 @@ def create_certificate(certificates_path,cert):
 
 CNF_cached = {}
 
-def forbidden_patterns_closure(forbidden_patterns4):
-	solution_patterns4 = [list(pattern) for pattern in product(['+','-'],repeat=4) if ''.join(pattern) not in forbidden_patterns4]
+def forbidden_patterns_closure(rank,forbidden_patterns):
+	solution_patterns = [list(pattern) for pattern in product(['+','-'],repeat=rank+1) if ''.join(pattern) not in forbidden_patterns]
 
-	closure = set(forbidden_patterns4)
-	for pattern in product(['+','-','?'],repeat=4):
+	closure = set(forbidden_patterns)
+	for pattern in product(['+','-','?'],repeat=rank+1):
 		pattern = ''.join(pattern)
 		completable = False
-		for sol in solution_patterns4:
-			if not [i for i in range(4) if pattern[i] != '?' and pattern[i] != sol[i]]:
+		for sol in solution_patterns:
+			if not [i for i in range(rank+1) if pattern[i] != '?' and pattern[i] != sol[i]]:
 				completable = True
 		if not completable:
 			closure.add(pattern)
 	return closure
 
 
-def forbidden_patterns_filter_free_closure(forbidden_patterns4):
-	solution_patterns4 = [list(pattern) for pattern in product(['+','-'],repeat=4) if ''.join(pattern) not in forbidden_patterns4]
+def forbidden_patterns_filter_free_closure(rank,forbidden_patterns):
+	solution_patterns = [list(pattern) for pattern in product(['+','-'],repeat=rank+1) if ''.join(pattern) not in forbidden_patterns]
 
-	closure = set(forbidden_patterns4)
-	for pattern in product(['+','-','?'],repeat=4):
+	closure = set(forbidden_patterns)
+	for pattern in product(['+','-','?'],repeat=rank+1):
 		pattern = ''.join(pattern)
 		completable = False
-		for sol in solution_patterns4:
-			if not [i for i in range(4) if pattern[i] != '?' and pattern[i] != sol[i]]:
+		for sol in solution_patterns:
+			if not [i for i in range(rank+1) if pattern[i] != '?' and pattern[i] != sol[i]]:
 				completable = True
 
 		# every zero must be completable to both, plus and minus
 		all_zeros_free = True
-		for k in range(4):
+		for k in range(rank+1):
 			if pattern[k] == '?':
 				for s in ['+','-']:
 					pattern_fill = pattern[:k]+s+pattern[k+1:]
 					completable_fill = False
-					for sol in solution_patterns4:
-						if not [i for i in range(4) if pattern_fill[i] != '?' and pattern_fill[i] != sol[i]]:
+					for sol in solution_patterns:
+						if not [i for i in range(rank+1) if pattern_fill[i] != '?' and pattern_fill[i] != sol[i]]:
 							completable_fill = True
 					if not completable_fill:
 						all_zeros_free = False
@@ -98,62 +96,67 @@ def forbidden_patterns_filter_free_closure(forbidden_patterns4):
 	return closure
 
 	
-def test_completable(X,N,forbidden_patterns4,verify=False):
+def test_completable(rank,X,N,forbidden_patterns,verify=False):
 	X_nonzero = {I:X[I] for I in X if X[I] != '?'}
-	for sol in enum_partial(N,forbidden_patterns4,nozeros=True,pre_set=X_nonzero,verify=verify):
+	for sol in enum_partial(rank,N,forbidden_patterns,nozeros=True,pre_set=X_nonzero,verify=verify):
 		return True
 	return False
 
 
 
-def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
+def enum_partial(rank,N,forbidden_patterns,nozeros=False,DEBUG=False,pre_set={},
 		num_zeros_max=None,num_zeros_min=None,blacklist_upset=[],blacklist_downset=[],verify=False):
+
 
 	vpool = IDPool(start_from=1) 
 	all_variables = {}
 
 	# initialize variables
-	for I in combinations(N,3):
+	for I in combinations(N,rank):
 		for s in ['+','-','?']:
 			all_variables[('trip',(*I,s))] = vpool.id()
 
 	if num_zeros_max != None or num_zeros_min != None:
-		maxnumzeros = len(list(combinations(N,3)))
-		for I in combinations(N,3):
+		maxnumzeros = len(list(combinations(N,rank)))
+		for I in combinations(N,rank):
 			for k in range(maxnumzeros+1):
 				all_variables[('numzeros',(*I,k))] = vpool.id()
+
 
 	def var(L):	return all_variables[L]
 	def var_trip(*L): return var(('trip',L))
 	def var_numzeros(*L): return var(('numzeros',L))
 
+
 	global CNF_cached	
 
-	forbidden_patterns4str = ','.join(sorted(forbidden_patterns4))
-	if (N,forbidden_patterns4str,nozeros) not in CNF_cached:
+	forbidden_patternsstr = ','.join(sorted(forbidden_patterns))
+	if (N,forbidden_patternsstr,nozeros) not in CNF_cached:
 
 		constraints0 = []
 
 		if DEBUG>=3: print("adding constraints for triple assignment")
-		for a,b,c in combinations(N,3):
-			constraints0.append([+var_trip(a,b,c,s) for s in ['+','-','?']])
+		for I in combinations(N,rank):
+			constraints0.append([+var_trip(*I,s) for s in ['+','-','?']])
 			for s1,s2 in combinations(['+','-','?'],2):
-				constraints0.append([-var_trip(a,b,c,s1),-var_trip(a,b,c,s2)])
+				constraints0.append([-var_trip(*I,s1),-var_trip(*I,s2)])
 
 		if nozeros:
 			if DEBUG>=3: print("adding constraints for no-zeros")
-			for a,b,c in combinations(N,3):
-				constraints0.append([+var_trip(a,b,c,s) for s in ['+','-']])
+			for I in combinations(N,rank):
+				constraints0.append([+var_trip(*I,s) for s in ['+','-']])
 
 		if DEBUG>=3: print("adding constraints for packets")
 		# signature functions: forbid invalid configuartions 
-		for s1,s2,s3,s4 in forbidden_patterns4:
-			for a,b,c,d in combinations(N,4):
-				constraints0.append([-var_trip(a,b,c,s1),-var_trip(a,b,d,s2),-var_trip(a,c,d,s3),-var_trip(b,c,d,s4)])
+		for S in forbidden_patterns:
+			assert(len(S) == rank+1)
+			for I in combinations(N,rank+1):
+				Ir = list(combinations(I,rank))
+				constraints0.append([-var_trip(*Ir[j],S[j]) for j in range(rank+1)])
 
-		CNF_cached[N,forbidden_patterns4str,nozeros] = constraints0
+		CNF_cached[N,forbidden_patternsstr,nozeros] = constraints0
 
-	constraints = copy(CNF_cached[N,forbidden_patterns4str,nozeros])
+	constraints = copy(CNF_cached[N,forbidden_patternsstr,nozeros])
 
 	if DEBUG>=3: print("adding constraints for pre-set triples")
 	for I in pre_set:
@@ -173,7 +176,7 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 
 	if num_zeros_max != None or num_zeros_min != None:
 		prev_I = None
-		for I in combinations(N,3):
+		for I in combinations(N,rank):
 			constraints.append([+var_numzeros(*I,k) for k in range(maxnumzeros+1)])
 			for k1,k2 in combinations(range(maxnumzeros+1),2):
 				constraints.append([-var_numzeros(*I,k1),-var_numzeros(*I,k2)])
@@ -209,11 +212,11 @@ def enum_partial(N,forbidden_patterns4,nozeros=False,DEBUG=False,pre_set={},
 		sol = set(sol)
 		
 		X = {}
-		for a,b,c in combinations(N,3):
+		for I in combinations(N,rank):
 			for s in ['+','-','?']:
-				if var_trip(a,b,c,s) in sol: 
-					X[a,b,c] = s
-			assert((a,b,c) in X)
+				if var_trip(*I,s) in sol: 
+					X[I] = s
+			assert(I in X)
 		yield X
 
 	if not found and verify:

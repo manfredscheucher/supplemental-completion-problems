@@ -3,6 +3,7 @@ from sys import *
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("fp",type=str,help="file with list of settings")
+parser.add_argument("rank",type=int,help="rank")
 parser.add_argument("n",type=int,help="number of elements")
 parser.add_argument("--timeout_setting","-tos",type=int,default=0,help="set timeout for setting")
 parser.add_argument("--timeout_gadget","-tog",type=int,default=0,help="set timeout for gadgets")
@@ -29,4 +30,4 @@ for algo in ['basic','advanced']:
         #f.write("#SBATCH --cpus-per-task=32\n")
         #f.write("#SBATCH --mail-user=scheucher@math.tu-berlin.de\n")
         #f.write("#SBATCH --mail-type=BEGIN,END\n")
-        f.write(f"time python3 find_gadgets_new.py {path} {n} -tos {args.timeout_setting} -tog {args.timeout_gadget} --algorithm {algo}\n")
+        f.write(f"time python3 find_gadgets_new.py {path} {args.rank} {n} -tos {args.timeout_setting} -tog {args.timeout_gadget} --algorithm {algo}\n")
