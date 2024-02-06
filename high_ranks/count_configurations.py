@@ -74,3 +74,5 @@ for line in open(args.fp):
 	else:
 		types[tuple(seq)] = (ct,forb)
 
+print("number of different types:",len(types))
+

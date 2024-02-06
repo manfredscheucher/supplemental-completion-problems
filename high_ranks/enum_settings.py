@@ -5,13 +5,19 @@ from more_itertools import powerset
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("rank",type=int,help="rank")
+parser.add_argument("--selection",action="store_true",help="only print selection")
 args = parser.parse_args()
 
 rank = args.rank
 
-# all patterns with rank-1 consecutive plus symbols are required 
-forced_pattern = '++' 
-forced_pattern = (rank-1)*'+'
+if args.selection:
+	assert(rank == 4)
+	# all patterns with 2 consecutive plus symbols are required 
+	forced_pattern = '++' 
+else:
+	# all patterns with rank-1 consecutive plus symbols are required 
+	forced_pattern = (rank-1)*'+'
+
 potential = [P for P in [''.join(P) for P in product('+-',repeat=rank+1)] if P.count(forced_pattern) == 0]
 
 found = []

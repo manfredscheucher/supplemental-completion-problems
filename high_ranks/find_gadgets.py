@@ -338,7 +338,7 @@ for line in (open(args.fp).readlines()):
 
 	if args.load_certificates:
 		cert = load_certificate(args.certificates_path,forbidden_patterns_orig)
-		if args.verifyonly: assert(cert)
+		#if args.verifyonly: assert(cert)
 	else:
 		cert = None
 

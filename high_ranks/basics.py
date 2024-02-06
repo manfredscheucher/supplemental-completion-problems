@@ -2,7 +2,7 @@ from itertools import *
 from ast import *
 from sys import *
 from copy import *
-from pysat.formula import IDPool
+from pysat.formula import IDPool, CNF
 import time
 import os.path
 
