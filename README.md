@@ -60,7 +60,7 @@ to count all configurations up to a certain number of elements $n$ for each sett
 To verify that the 41 settings in `r3_settings_hard.txt` are non-isomorphic, 
 it is sufficient to use $n=6$ as all settings yield different numbers:
 ```
-python count_configurations.py r3_settings_hard.txt 3 6
+    python count_configurations.py r3_settings_hard.txt 3 6
 ```
 
 
@@ -100,6 +100,7 @@ This will check the correctness of a model in the case a CNF is satisfiable,
 and otherwise, if the CNF is unsatisfiablitiy,
 it will use cadidal to create a DRAT certificate and 
 employ the independent proof-checking tool DRAT-trim to verify the certificate.
+
 
 
 ## Certificates

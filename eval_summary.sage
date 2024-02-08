@@ -2,6 +2,7 @@ from ast import literal_eval
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("fp",type=str,help="file with summary")
+parser.add_argument("--reference","-fp2",type=str,help="reference file with summary")
 parser.add_argument("--point-size","-s",type=int,default=10,help="size of points")
 parser.add_argument("--logarithmic","-l",action="store_true",help="size of points")
 
@@ -20,6 +21,16 @@ for line in open(args.fp):
 	summary.append(entry)
 
 
+summary2 = []
+if args.reference:
+	for line in open(args.reference):
+		entry = literal_eval(line)
+		assert(type(entry) == dict)
+		assert('total_time' in entry) 
+		assert('status' in entry) 
+		assert('tests' in entry) 
+		summary2.append(entry)
+	assert(len(summary2) == len(summary))
 
 
 def plot_stat(prop,status,color):
@@ -56,12 +67,16 @@ if 1:
 	stat = [(entry['total_time'],entry['status']) for entry in summary]
 	time,status = zip(*sorted(stat))
 
-
 	plt = []
 	plt += plot_stat(time,status,'red')
 
+	plt = sum(plt)
+	max_value = max(entry['total_time'] for entry in summary+summary2)
+	plt.axes_range(0,len(summary),0,max_value)
+	print("time max_value",max_value)
+
 	plt_file = args.fp + ".time.pdf"
-	sum(plt).save(plt_file)	
+	plt.save(plt_file)	
 	print("plotted time statistic to file:",plt_file)
 
 
@@ -85,8 +100,13 @@ if 1:
 	plt += plot_stat(up   ,status,'red'  )
 	plt += plot_stat(down ,status,'blue' )
 
+	plt = sum(plt)
+	max_value = max(sum(test['blacklist_upset']+test['blacklist_downset'] for test in entry['tests']) for entry in summary+summary2)
+	plt.axes_range(0,len(summary),0,max_value)
+	print("blackist max_value",max_value)
+
 	plt_file = args.fp + ".blacklist.pdf"
-	sum(plt).save(plt_file)	
+	plt.save(plt_file)	
 	print("plotted time statistic to file:",plt_file)
 
 
