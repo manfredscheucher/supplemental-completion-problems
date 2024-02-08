@@ -40,17 +40,18 @@ def plot_stat(prop,status,color):
 
 	for i in range(len(prop)):
 		if status[i] == 'fail':
-			color1 = color
-			marker = ','
+			color1 = 'red'
+			#marker = ','
+			marker = 'o'
 			markeredgecolor = None
 		elif status[i] == 'timeout':
-			color1 = color
+			color1 = 'orange'
 			marker = 'x'
 			markeredgecolor = None
 		elif status[i] == 'succ':
 			color1 = 'white'
 			marker = 'o'
-			markeredgecolor = color
+			markeredgecolor = 'green'
 
 
 		plt.append(point2d((i+1,prop[i]),color=color1,markeredgecolor=markeredgecolor,marker=marker,size=args.point_size))
@@ -68,7 +69,7 @@ if 1:
 	time,status = zip(*sorted(stat))
 
 	plt = []
-	plt += plot_stat(time,status,'red')
+	plt += plot_stat(time,status,'black')
 
 	plt = sum(plt)
 	max_value = max(entry['total_time'] for entry in summary+summary2)
@@ -96,9 +97,9 @@ if 1:
 	total,up,down,status = zip(*sorted(stat))
 
 	plt = []
-	plt += plot_stat(total,status,'black')
-	plt += plot_stat(up   ,status,'red'  )
-	plt += plot_stat(down ,status,'blue' )
+	#plt += plot_stat(total,status,'black')
+	plt += plot_stat(up   ,status,'gray'  )
+	plt += plot_stat(down ,status,'black' )
 
 	plt = sum(plt)
 	max_value = max(sum(test['blacklist_upset']+test['blacklist_downset'] for test in entry['tests']) for entry in summary+summary2)
