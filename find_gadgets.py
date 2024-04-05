@@ -31,21 +31,14 @@ def find_gadget_incremental(rank,N,logic_str,logic_fun,logic_vars):
 	start_time0 = time.perf_counter()
 
 	vpool = IDPool(start_from=1) 
-	all_variables = {}
 
 	# initialize variables
-	for I in combinations(N,rank):
-		for s in ['+','-','?']:
-			all_variables[('trip',(*I,s))] = vpool.id()
-
-	def var(L):	return all_variables[L]
-	def var_trip(*L): return var(('trip',L))
+	var_trip_ = {(*I,s):vpool.id() for I in combinations(N,rank) for s in ['+','-','?']}
+	def var_trip(*X): return var_trip_[X]
 
 	constraints = []
-	for v in all_variables.values():
+	for v in var_trip_.values():
 		constraints.append([+v,-v])
-
-
 
 	if DEBUG>=3: print("adding constraints for triple assignment")
 	for I in combinations(N,rank):
@@ -64,6 +57,38 @@ def find_gadget_incremental(rank,N,logic_str,logic_fun,logic_vars):
 	# pre-set zeros
 	for v in logic_vars:
 		constraints.append([+var_trip(*v,'?')])
+
+
+	if args.algorithm == 'final':
+		if DEBUG>=3: print(f"adding constraints for valid assignments")
+		for var_assignment in product([True,False],repeat=len(logic_vars)):
+			if logic_fun(*var_assignment):
+				# make sure there exists a completion for every valid assignment (not too strict)
+				var_trip_comp_ = {(*I,s):vpool.id() for I in combinations(N,rank) for s in ['+','-']}
+				def var_trip_comp(*X): return var_trip_comp_[X]
+
+				for I in combinations(N,rank):
+					constraints.append([+var_trip_comp(*I,s) for s in ['+','-']])
+					for s1,s2 in combinations(['+','-'],2):
+						constraints.append([-var_trip_comp(*I,s1),-var_trip_comp(*I,s2)])
+
+				for I in combinations(N,rank):
+					for s in ['+','-']:
+						constraints.append([-var_trip(*I,s),+var_trip_comp(*I,s)])
+
+				for i,I in enumerate(logic_vars):
+					s = '+' if var_assignment[i] == True else '-'
+					constraints.append([+var_trip_comp(*I,s)])
+					
+					
+				# signature functions: forbid invalid configuartions 
+				for S in forbidden_patterns:
+					if '?' not in S: # maybe even check those with '?' as well
+						assert(len(S) == rank+1)
+						for I in combinations(N,rank+1):
+							Ir = list(combinations(I,rank))
+							constraints.append([-var_trip_comp(*Ir[j],S[j]) for j in range(rank+1)])
+
 
 	if USE_CADICAL:
 		try:
@@ -99,13 +124,15 @@ def find_gadget_incremental(rank,N,logic_str,logic_fun,logic_vars):
 		sol = set(sol) # for faster lookup
 		X = {I:s for I in combinations(N,rank) for s in ['+','-','?'] if var_trip(*I,s) in sol}
 		X_str = X_to_str(rank,X,N)
-		#print("solution #",ct,":",X_str)#,X)
 
 		if DEBUG>=3: 
 			print("blacklisted: up =",blacklist_upset,", down =",blacklist_downset,end="\r")
 			stdout.flush()
 
 		too_strict,too_loose = test_gadget(rank,X,N,forbidden_patterns,logic_str,logic_fun,logic_vars)
+		
+		#print("solution #",ct,":",X_str,too_strict,too_loose)#,X)
+		if args.algorithm == 'final': assert(not too_strict)
 
 		if not too_strict and not too_loose: 
 			# found gadget!!
@@ -285,7 +312,7 @@ parser.add_argument("rank",type=int,help="rank")
 parser.add_argument("n",type=int,help="number of elements")
 parser.add_argument("--timeout_setting","-tos",type=int,default=0,help="set timeout for setting")
 parser.add_argument("--timeout_gadget","-tog",type=int,default=0,help="set timeout for gadgets")
-parser.add_argument("--algorithm",choices=['advanced','basic'],default='advanced',help="choose basic or advanced algorithm")
+parser.add_argument("--algorithm",choices=['basic','advanced','final'],default='final',help="choose algorithm")
 parser.add_argument("--certificates_path","-cp",type=str,default=None,help="path for certificates")
 parser.add_argument("--DEBUG","-D",type=int,default=0,help="number of elements")
 parser.add_argument("--load-certificates","-L",action="store_true",help="load precomputed certificates")

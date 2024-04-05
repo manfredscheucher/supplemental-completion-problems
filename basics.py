@@ -107,25 +107,16 @@ def test_completable(rank,X,N,forbidden_patterns,verify=False):
 def enum_partial(rank,N,forbidden_patterns,nozeros=False,DEBUG=False,pre_set={},
 		num_zeros_max=None,num_zeros_min=None,blacklist_upset=[],blacklist_downset=[],verify=False):
 
-
 	vpool = IDPool(start_from=1) 
-	all_variables = {}
-
+	
 	# initialize variables
-	for I in combinations(N,rank):
-		for s in ['+','-','?']:
-			all_variables[('trip',(*I,s))] = vpool.id()
+	var_trip_ = {(*I,s):vpool.id() for I in combinations(N,rank) for s in ['+','-','?']}
+	def var_trip(*X): return var_trip_[X]
 
 	if num_zeros_max != None or num_zeros_min != None:
 		maxnumzeros = len(list(combinations(N,rank)))
-		for I in combinations(N,rank):
-			for k in range(maxnumzeros+1):
-				all_variables[('numzeros',(*I,k))] = vpool.id()
-
-
-	def var(L):	return all_variables[L]
-	def var_trip(*L): return var(('trip',L))
-	def var_numzeros(*L): return var(('numzeros',L))
+		var_numzeros_ = {(*I,k):vpool.id() for I in combinations(N,rank) for k in range(maxnumzeros+1)}
+		def var_numzeros(*X): return var_numzeros_[X]
 
 
 	global CNF_cached	
