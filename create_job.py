@@ -17,7 +17,7 @@ params = path+" "+str(n)
 params_ = path+"_"+str(n)
 path_short = path.split("/")[-1]  if "/" in params_  else params_
 
-for algo in ['basic','advanced']:
+for algo in ['basic','advanced','final']:
     name = path_short+algo[0]+str(n)
     job_file = params_+algo[0]+".job"
     print("create job file",job_file)
