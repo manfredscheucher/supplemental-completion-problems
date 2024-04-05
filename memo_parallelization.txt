@@ -13,7 +13,7 @@ cat data5/_s???.summary*final* > merge5F
 
 sage eval_summary.sage merge5B
 sage eval_summary.sage merge5A
-sage eval_summary.sage merge6F
+sage eval_summary.sage merge5F
 
 
 
@@ -30,8 +30,8 @@ cat data6/_s???.summary*basic* > merge6B
 cat data6/_s???.summary*advanced* > merge6A
 cat data6/_s???.summary*final* > merge6F
 
-sage eval_summary.sage merge5B
-sage eval_summary.sage merge5A
+sage eval_summary.sage merge6B
+sage eval_summary.sage merge6A
 sage eval_summary.sage merge6F
 
 
