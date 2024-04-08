@@ -1,8 +1,8 @@
 # commands for n=5
 
 mkdir data5
-split -l 1 settings.txt --numeric-suffixes=1 -a 3 data5/_s
-for i in $(ls data5/_s???); do python create_job.py $i 5 -tog 300; done
+split -l 1 r3_settings_all.txt --numeric-suffixes=1 -a 3 data5/_s
+for i in $(ls data5/_s???); do python create_job.py $i 3 5 -tog 300; done
 for i in $(ls data5/*.job); do sbatch $i; done
 
 wc -l data5/*summ* # check if finished
@@ -20,8 +20,8 @@ sage eval_summary.sage merge5F
 # commands for n=6
 
 mkdir data6
-split -l 1 settings.txt --numeric-suffixes=1 -a 3 data6/_s
-for i in $(ls data6/_s???); do python create_job.py $i 6 -tog 300; done
+split -l 1 r3_settings_all.txt --numeric-suffixes=1 -a 3 data6/_s
+for i in $(ls data6/_s???); do python create_job.py $i 3 6 -tog 300; done
 for i in $(ls data6/*.job); do sbatch $i; done
 
 wc -l data6/*summ* # check if finished
