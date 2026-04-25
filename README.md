@@ -21,7 +21,7 @@ install KCBox https://github.com/meelgroup/KCBox
 
 
 
-## Enumerating the settings
+## Enumerating settings
 
 The following command performs the enumeration of all 
 families $\mathcal{F}$ of rank 3 sign patterns on $[4]$
